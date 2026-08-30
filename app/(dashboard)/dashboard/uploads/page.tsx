@@ -1,0 +1,369 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import {
+  UploadCloud,
+  File,
+  CheckCircle2,
+  AlertTriangle,
+  Loader2,
+  HardDrive,
+  Cpu,
+  Sparkles,
+  Layers,
+  X,
+} from "lucide-react";
+import { Header } from "@/components/header";
+import { formatBytes, cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { useDropzone } from "react-dropzone";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+
+interface StorageAccount {
+  id: string;
+  email: string;
+  availableStorage: string;
+  usagePercentage: number;
+}
+
+export default function SmartUploadsPage() {
+  const [accounts, setAccounts] = useState<StorageAccount[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(true);
+  const [strategy, setStrategy] = useState("LARGEST_AVAILABLE");
+  const [selectedAccount, setSelectedAccount] = useState("");
+  const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<{ [key: string]: number }>({});
+  const [uploadResults, setUploadResults] = useState<
+    Array<{ name: string; success: boolean; accountEmail?: string; error?: string }>
+  >([]);
+
+  const fetchAccounts = async () => {
+    try {
+      setLoadingAccounts(true);
+      const res = await fetch("/api/storage/analytics");
+      if (res.ok) {
+        const data = await res.json();
+        setAccounts(data.accounts || []);
+        if (data.accounts?.length > 0) {
+          setSelectedAccount(data.accounts[0].id);
+        }
+      }
+    } catch {
+      toast.error("Failed to load accounts for routing");
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAccounts();
+  }, []);
+
+  const onDrop = (acceptedFiles: File[]) => {
+    setFilesToUpload((prev) => [...prev, ...acceptedFiles]);
+  };
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    multiple: true,
+  });
+
+  const removeFile = (index: number) => {
+    setFilesToUpload((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleStartUpload = async () => {
+    if (filesToUpload.length === 0) return;
+    setUploading(true);
+    setUploadResults([]);
+
+    const results: Array<{ name: string; success: boolean; accountEmail?: string; error?: string }> = [];
+
+    for (let i = 0; i < filesToUpload.length; i++) {
+      const file = filesToUpload[i];
+      setProgress((prev) => ({ ...prev, [file.name]: 20 }));
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("strategy", strategy);
+        if (strategy === "MANUAL" && selectedAccount) {
+          formData.append("targetAccountId", selectedAccount);
+        }
+
+        setProgress((prev) => ({ ...prev, [file.name]: 60 }));
+
+        const res = await fetch("/api/files/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          setProgress((prev) => ({ ...prev, [file.name]: 100 }));
+          results.push({
+            name: file.name,
+            success: true,
+            accountEmail: data.account?.email,
+          });
+        } else {
+          results.push({
+            name: file.name,
+            success: false,
+            error: data.error || "Upload failed",
+          });
+        }
+      } catch (err: any) {
+        results.push({
+          name: file.name,
+          success: false,
+          error: err.message || "Network error",
+        });
+      }
+    }
+
+    setUploadResults(results);
+    setUploading(false);
+    setFilesToUpload([]);
+    toast.success("Upload batch process completed!");
+    fetchAccounts();
+  };
+
+  return (
+    <div className="flex-1 flex flex-col min-w-0 pb-16">
+      <Header accounts={accounts} onRefresh={fetchAccounts} />
+
+      <main className="px-8 py-7 max-w-5xl w-full mx-auto space-y-6 animate-fade-in">
+        {/* Title */}
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-foreground">
+            Smart Storage Upload Engine
+          </h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Files are automatically dispatched to the optimal Google Drive account according to your allocation strategy.
+          </p>
+        </div>
+
+        {/* Strategy Selector Strip */}
+        <Card className="p-5 space-y-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-foreground uppercase tracking-wider font-mono">
+              1. Select Routing Strategy
+            </span>
+            <Badge variant="info" className="text-[10px]">
+              ALGORITHM ACTIVE
+            </Badge>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              {
+                id: "LARGEST_AVAILABLE",
+                name: "Largest Free Space",
+                desc: "Directs to drive with the most bytes remaining.",
+              },
+              {
+                id: "LEAST_USED",
+                name: "Least Used %",
+                desc: "Prioritizes accounts with lowest % capacity.",
+              },
+              {
+                id: "BALANCED",
+                name: "Round-Robin Balanced",
+                desc: "Evenly distributes files across all drives.",
+              },
+              {
+                id: "MANUAL",
+                name: "Manual Destination",
+                desc: "You explicitly choose the target Google Drive.",
+              },
+            ].map((strat) => {
+              const isSelected = strategy === strat.id;
+              return (
+                <button
+                  key={strat.id}
+                  type="button"
+                  onClick={() => setStrategy(strat.id)}
+                  className={cn(
+                    "p-3 rounded-xl border text-left flex flex-col justify-between space-y-2 transition-all cursor-pointer",
+                    isSelected
+                      ? "border-primary bg-primary/10 shadow-sm ring-1 ring-primary"
+                      : "border-border bg-card hover:bg-accent"
+                  )}
+                >
+                  <div className="space-y-1">
+                    <span className={cn("text-xs font-bold block", isSelected ? "text-primary" : "text-foreground")}>
+                      {strat.name}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground leading-tight block">
+                      {strat.desc}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {strategy === "MANUAL" && (
+            <div className="pt-3 border-t border-border flex items-center gap-3">
+              <label className="text-xs font-semibold text-foreground shrink-0">
+                Target Account:
+              </label>
+              <select
+                value={selectedAccount}
+                onChange={(e) => setSelectedAccount(e.target.value)}
+                className="input text-xs max-w-sm"
+              >
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.email} ({formatBytes(Number(acc.availableStorage))} free)
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </Card>
+
+        {/* Drag and Drop Zone */}
+        <Card className="p-6 space-y-4 shadow-sm">
+          <span className="text-xs font-bold text-foreground uppercase tracking-wider font-mono">
+            2. Drop Files
+          </span>
+
+          <div
+            {...getRootProps()}
+            className={cn(
+              "border-2 border-dashed rounded-2xl p-10 text-center flex flex-col items-center justify-center space-y-3 cursor-pointer transition-all",
+              isDragActive
+                ? "border-primary bg-primary/5 scale-[0.99]"
+                : "border-border hover:border-border/80 bg-muted/20"
+            )}
+          >
+            <input {...getInputProps()} />
+            <div className="size-12 rounded-2xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center">
+              <UploadCloud className="size-6" />
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-foreground">
+                {isDragActive
+                  ? "Drop files here to queue"
+                  : "Drag and drop files here, or click to browse"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Supports all file types (documents, images, videos, archives)
+              </p>
+            </div>
+          </div>
+
+          {/* Queue List */}
+          {filesToUpload.length > 0 && (
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-foreground">
+                  Queued Files ({filesToUpload.length})
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setFilesToUpload([])}
+                  className="text-muted-foreground hover:text-destructive text-xs h-7"
+                >
+                  Clear all
+                </Button>
+              </div>
+
+              <div className="divide-y divide-border max-h-60 overflow-y-auto border border-border rounded-xl bg-card">
+                {filesToUpload.map((file, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 flex items-center justify-between text-xs"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <File className="size-4 text-muted-foreground shrink-0" />
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-medium text-foreground truncate">
+                          {file.name}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground font-mono">
+                          {formatBytes(file.size)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => removeFile(idx)}
+                      className="p-1 rounded text-muted-foreground hover:text-destructive cursor-pointer"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              <Button
+                onClick={handleStartUpload}
+                disabled={uploading}
+                className="w-full py-2.5 text-xs font-semibold gap-2 justify-center shadow-sm"
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    <span>Uploading & Routing via {strategy}...</span>
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud className="size-4" />
+                    <span>Dispatch {filesToUpload.length} Files to Cloud Pool</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
+          {/* Results Summary */}
+          {uploadResults.length > 0 && (
+            <div className="space-y-2 pt-3 border-t border-border">
+              <span className="text-xs font-bold text-foreground block">
+                Upload Results:
+              </span>
+              <div className="space-y-1.5">
+                {uploadResults.map((res, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "p-2.5 rounded-xl border flex items-center justify-between text-xs",
+                      res.success
+                        ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                        : "bg-destructive/10 border-destructive/20 text-destructive"
+                    )}
+                  >
+                    <div className="flex items-center gap-2 truncate">
+                      {res.success ? (
+                        <CheckCircle2 className="size-4 shrink-0" />
+                      ) : (
+                        <AlertTriangle className="size-4 shrink-0" />
+                      )}
+                      <span className="font-medium truncate">{res.name}</span>
+                    </div>
+
+                    <span className="text-[11px] font-mono shrink-0 ml-2">
+                      {res.success
+                        ? `Stored on ${res.accountEmail}`
+                        : res.error}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </Card>
+      </main>
+    </div>
+  );
+}

@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// Better Auth required models
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions         Session[]
+  accounts         Account[]
+  storageAccounts  StorageAccount[]
+  files            File[]
+  folders          Folder[]
+  uploads          Upload[]
+  storageStrategies StorageStrategy[]
+  activityLogs     ActivityLog[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?  @db.Text
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?   @db.Text
+  password              String?
+  issuer                String?   @db.Text
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("accounts")
+}
+
+model Verification {
+  id         String    @id @default(cuid())
+  identifier String
+  value      String    @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  @@map("verifications")
+}
+
+// SkyDrive specific models
+model StorageAccount {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String    @default("google_drive")
+  providerAccountId String
+  email             String
+  displayName       String?
+  avatarUrl         String?   @db.Text
+  // Stored encrypted
+  accessTokenEnc    String    @db.Text
+  refreshTokenEnc   String    @db.Text
+  tokenExpiresAt    DateTime?
+  totalStorage      BigInt    @default(0)
+  usedStorage       BigInt    @default(0)
+  availableStorage  BigInt    @default(0)
+  usagePercentage   Float     @default(0)
+  isActive          Boolean   @default(true)
+  lastSyncedAt      DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  files            File[]
+  folders          Folder[]
+  uploads          Upload[]
+  storageAnalytics StorageAnalytics[]
+  activityLogs     ActivityLog[]
+
+  @@unique([userId, email])
+  @@map("storage_accounts")
+}
+
+model File {
+  id               String         @id @default(cuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storageAccountId String
+  storageAccount   StorageAccount @relation(fields: [storageAccountId], references: [id], onDelete: Cascade)
+  providerFileId   String
+  name             String
+  mimeType         String?
+  size             BigInt         @default(0)
+  parentProviderId String?
+  webViewLink      String?        @db.Text
+  thumbnailLink    String?        @db.Text
+  status           String         @default("active")
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  uploads Upload[]
+
+  @@unique([storageAccountId, providerFileId])
+  @@map("files")
+}
+
+model Folder {
+  id               String         @id @default(cuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storageAccountId String
+  storageAccount   StorageAccount @relation(fields: [storageAccountId], references: [id], onDelete: Cascade)
+  providerFolderId String
+  name             String
+  parentFolderId   String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([storageAccountId, providerFolderId])
+  @@map("folders")
+}
+
+model Upload {
+  id               String         @id @default(cuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storageAccountId String
+  storageAccount   StorageAccount @relation(fields: [storageAccountId], references: [id], onDelete: Cascade)
+  fileId           String?
+  file             File?          @relation(fields: [fileId], references: [id])
+  originalFilename String
+  fileSize         BigInt
+  mimeType         String?
+  uploadStrategy   String         @default("manual")
+  status           String         @default("pending")
+  errorMessage     String?        @db.Text
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime       @default(now())
+
+  @@map("uploads")
+}
+
+model StorageStrategy {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  strategyName String   @default("manual")
+  alertThreshold Int    @default(90)
+  isDefault    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId])
+  @@map("storage_strategies")
+}
+
+model StorageAnalytics {
+  id               String         @id @default(cuid())
+  storageAccountId String
+  storageAccount   StorageAccount @relation(fields: [storageAccountId], references: [id], onDelete: Cascade)
+  usedStorage      BigInt
+  availableStorage BigInt
+  totalStorage     BigInt
+  usagePercentage  Float
+  recordedAt       DateTime       @default(now())
+
+  @@map("storage_analytics")
+}
+
+model ActivityLog {
+  id               String          @id @default(cuid())
+  userId           String
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storageAccountId String?
+  storageAccount   StorageAccount? @relation(fields: [storageAccountId], references: [id])
+  activityType     String
+  description      String          @db.Text
+  metadata         Json?
+  createdAt        DateTime        @default(now())
+
+  @@map("activity_logs")
+}
