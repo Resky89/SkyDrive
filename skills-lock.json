@@ -108,6 +108,11 @@
       "sourceType": "autoskills-registry",
       "computedHash": "4bc9e220b816f74547d770f73a2878e86df035f42e445c1e98875dd9793fe927"
     },
+    "hono": {
+      "source": "yusukebe/hono-skill",
+      "sourceType": "autoskills-registry",
+      "computedHash": "bc1c40e71ec13faa82ab7e9464bfd57cc282780a1087b021d26ba0d2c082059b"
+    },
     "improve-animations": {
       "source": "emilkowalski/skills",
       "sourceType": "github",
@@ -222,6 +227,11 @@
       "sourceType": "github",
       "skillPath": "skills/write-swift/SKILL.md",
       "computedHash": "ccbb74cac81765fcf2912ceba8d188fddbd75393ecb808aa1a4f6f58d9c2c828"
+    },
+    "zod": {
+      "source": "pproenca/dot-skills",
+      "sourceType": "autoskills-registry",
+      "computedHash": "aa8a97195b07763d37494b511f48be90979fd6826c031956c831cfc58f6a24b8"
     }
   }
 }
