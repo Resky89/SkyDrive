@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, RefreshCw, UploadCloud, User as UserIcon } from "lucide-react";
+import Image from "next/image";
+import { Sparkles, RefreshCw, UploadCloud } from "lucide-react";
 import { GlobalSearchDialog } from "@/components/global-search-dialog";
 import { QuickUploadModal } from "@/components/quick-upload-modal";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useSession } from "@/lib/auth-client";
+import { useLanguage } from "@/lib/i18n";
 import { toast } from "sonner";
 import { cn, getInitials } from "@/lib/utils";
 
@@ -19,9 +22,15 @@ interface HeaderProps {
 
 export function Header({ accounts = [], onRefresh }: HeaderProps) {
   const { data: session } = useSession();
+  const { t } = useLanguage();
+  const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSyncAll = async () => {
     setIsSyncing(true);
@@ -43,15 +52,29 @@ export function Header({ accounts = [], onRefresh }: HeaderProps) {
 
   return (
     <>
-      <header className="h-16 border-b border-border px-6 flex items-center justify-between bg-card/80 backdrop-blur-md sticky top-0 z-20 transition-colors duration-200">
+      <header className="h-16 border-b border-border px-6 flex items-center justify-between bg-card sticky top-0 z-20 shadow-xs transition-colors duration-200 gap-4">
+        {/* Logo (visible only on mobile where sidebar is hidden) */}
+        <Link href="/dashboard" className="shrink-0 lg:hidden flex items-center gap-2">
+          <Image
+            src="/SkyDrive.svg"
+            alt="SkyDrive"
+            width={28}
+            height={28}
+            className="h-7 w-auto object-contain"
+          />
+          <span className="font-bold text-sm tracking-tight brand-text-gradient">
+            SkyDrive
+          </span>
+        </Link>
+
         {/* Global Search Bar Trigger */}
         <button
           onClick={() => setIsSearchOpen(true)}
-          className="flex items-center gap-3 px-3.5 py-1.5 rounded-xl bg-muted/60 border border-border text-muted-foreground hover:text-foreground hover:border-border/80 transition-all text-xs w-72 justify-between group shadow-sm cursor-pointer"
+          className="flex items-center gap-3 px-3.5 py-1.5 rounded-xl bg-muted/60 border border-border text-muted-foreground hover:text-foreground hover:border-border/80 transition-all text-xs w-64 sm:w-72 justify-between group shadow-sm cursor-pointer flex-1 max-w-sm"
         >
           <div className="flex items-center gap-2">
-            <Search className="size-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-            <span className="truncate">Search across all clouds...</span>
+            <Sparkles className="size-3.5 text-primary group-hover:scale-110 transition-transform" />
+            <span className="truncate">{t.headerSearch}</span>
           </div>
           <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-card border border-border text-muted-foreground">
             ⌘K
@@ -59,7 +82,10 @@ export function Header({ accounts = [], onRefresh }: HeaderProps) {
         </button>
 
         {/* Action Controls & User Profile */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          {/* Language Switcher */}
+          <LanguageSwitcher variant="pill" />
+
           {/* Light / Dark Mode Toggle */}
           <ThemeToggle />
 
@@ -72,7 +98,7 @@ export function Header({ accounts = [], onRefresh }: HeaderProps) {
             className="gap-1.5 text-xs font-medium shadow-sm"
           >
             <RefreshCw className={cn("size-3.5", isSyncing && "animate-spin text-primary")} />
-            <span className="hidden sm:inline">Sync Quotas</span>
+            <span className="hidden sm:inline">{t.headerSync}</span>
           </Button>
 
           {/* Quick Upload Button */}
@@ -82,15 +108,15 @@ export function Header({ accounts = [], onRefresh }: HeaderProps) {
             className="gap-1.5 text-xs font-semibold shadow-sm"
           >
             <UploadCloud className="size-3.5" />
-            <span>Upload</span>
+            <span>{t.headerUpload}</span>
           </Button>
 
           {/* User Profile Pill in Header */}
-          {session?.user && (
+          {mounted && session?.user && (
             <Link
-              href="/dashboard/settings"
+              href="/dashboard/profile"
               className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full bg-muted/60 border border-border hover:bg-accent/60 hover:border-border/80 transition-all cursor-pointer shadow-sm ml-1"
-              title="Open Settings & Profile"
+              title="Open Profile"
             >
               <Avatar className="size-6">
                 {session.user.image && (

@@ -205,6 +205,120 @@ export async function deleteFileFromDrive(
   await drive.files.delete({ fileId: providerFileId });
 }
 
+export async function renameFileInDrive(
+  storageAccountId: string,
+  providerFileId: string,
+  newName: string
+) {
+  const drive = await getGoogleDriveClient(storageAccountId);
+  const { data } = await drive.files.update({
+    fileId: providerFileId,
+    requestBody: {
+      name: newName,
+    },
+    fields: "id, name",
+  });
+  return data;
+}
+
+export async function moveFileInDrive(
+  storageAccountId: string,
+  providerFileId: string,
+  newParentId: string
+) {
+  const drive = await getGoogleDriveClient(storageAccountId);
+  // Retrieve previous parents
+  const file = await drive.files.get({
+    fileId: providerFileId,
+    fields: "parents",
+  });
+  const previousParents = (file.data.parents || []).join(",");
+
+  const targetParent = newParentId === "root" ? "root" : newParentId;
+
+  const { data } = await drive.files.update({
+    fileId: providerFileId,
+    addParents: targetParent,
+    removeParents: previousParents || undefined,
+    fields: "id, name, parents",
+  });
+  return data;
+}
+
+export async function downloadFileStream(
+  storageAccountId: string,
+  providerFileId: string,
+  mimeType?: string
+) {
+  const drive = await getGoogleDriveClient(storageAccountId);
+
+  // If it's a native Google Docs / Sheets / Slides file, export it
+  if (mimeType === "application/vnd.google-apps.document") {
+    const res = await drive.files.export(
+      {
+        fileId: providerFileId,
+        mimeType:
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      },
+      { responseType: "stream" }
+    );
+    return {
+      stream: res.data,
+      mimeType:
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      extension: ".docx",
+    };
+  }
+
+  if (mimeType === "application/vnd.google-apps.spreadsheet") {
+    const res = await drive.files.export(
+      {
+        fileId: providerFileId,
+        mimeType:
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+      { responseType: "stream" }
+    );
+    return {
+      stream: res.data,
+      mimeType:
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      extension: ".xlsx",
+    };
+  }
+
+  if (mimeType === "application/vnd.google-apps.presentation") {
+    const res = await drive.files.export(
+      {
+        fileId: providerFileId,
+        mimeType:
+          "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      },
+      { responseType: "stream" }
+    );
+    return {
+      stream: res.data,
+      mimeType:
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      extension: ".pptx",
+    };
+  }
+
+  // Standard binary file download
+  const res = await drive.files.get(
+    {
+      fileId: providerFileId,
+      alt: "media",
+    },
+    { responseType: "stream" }
+  );
+
+  return {
+    stream: res.data,
+    mimeType: mimeType || "application/octet-stream",
+  };
+}
+
 export async function getUserInfo(accessToken: string) {
   const oauth2Client = createOAuth2Client();
   oauth2Client.setCredentials({ access_token: accessToken });
@@ -212,3 +326,4 @@ export async function getUserInfo(accessToken: string) {
   const { data } = await oauth2.userinfo.get();
   return data;
 }
+

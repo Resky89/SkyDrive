@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { signIn } from "@/lib/auth-client";
-import { Cloud, Lock, Mail, Loader2, ArrowRight } from "lucide-react";
+import { Lock, Mail, Loader2, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -65,9 +66,15 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-6">
         {/* Brand Header */}
         <div className="text-center space-y-2">
-          <div className="size-11 rounded-2xl bg-primary text-primary-foreground flex items-center justify-center mx-auto shadow-sm">
-            <Cloud className="size-6" />
-          </div>
+          <Link href="/" className="inline-block">
+            <Image
+              src="/SkyDrive.svg"
+              alt="SkyDrive"
+              width={48}
+              height={48}
+              className="h-10 w-auto object-contain mx-auto"
+            />
+          </Link>
           <h1 className="text-xl font-extrabold tracking-tight text-foreground">
             Sign In to SkyDrive
           </h1>

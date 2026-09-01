@@ -1,9 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Cloud,
   LayoutDashboard,
   HardDrive,
   UploadCloud,
@@ -11,27 +12,81 @@ import {
   BarChart2,
   Settings,
   LogOut,
-  ChevronRight,
+  Image as ImageIcon,
+  Video,
+  FileText,
+  Sparkles,
 } from "lucide-react";
 import { signOut, useSession } from "@/lib/auth-client";
-import { cn, getInitials } from "@/lib/utils";
+import { cn, getInitials, formatBytes } from "@/lib/utils";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { useLanguage } from "@/lib/i18n";
 
-const navigation = [
-  { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Connected Accounts", href: "/dashboard/accounts", icon: HardDrive },
-  { name: "Smart Upload", href: "/dashboard/uploads", icon: UploadCloud },
-  { name: "File Explorer", href: "/dashboard/files", icon: FolderOpen },
-  { name: "Storage Analytics", href: "/dashboard/analytics", icon: BarChart2 },
-  { name: "Settings", href: "/dashboard/settings", icon: Settings },
-];
+interface SidebarStorageBreakdown {
+  photosSize: string;
+  videosSize: string;
+  documentsSize: string;
+  othersSize: string;
+  freeStorage: string;
+  usedStorage: string;
+  totalStorage: string;
+}
+
+interface SidebarStorageData {
+  totalStorage: string;
+  usedStorage: string;
+  availableStorage: string;
+  usagePercentage: number;
+  breakdown?: SidebarStorageBreakdown;
+}
 
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
+  const { t } = useLanguage();
+  const [storageData, setStorageData] = useState<SidebarStorageData | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchStorage = async () => {
+      try {
+        const res = await fetch("/api/storage/analytics");
+        if (res.ok) {
+          const json = await res.json();
+          if (isMounted && json.summary) {
+            setStorageData({
+              totalStorage: json.summary.totalStorage || "0",
+              usedStorage: json.summary.usedStorage || "0",
+              availableStorage: json.summary.availableStorage || "0",
+              usagePercentage: json.summary.usagePercentage || 0,
+              breakdown: json.summary.breakdown,
+            });
+          }
+        }
+      } catch {
+        // ignore errors
+      }
+    };
+    fetchStorage();
+    const interval = setInterval(fetchStorage, 30000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const navigation = [
+    { name: t.menuOverview, href: "/dashboard", icon: LayoutDashboard },
+    { name: t.menuAccounts, href: "/dashboard/accounts", icon: HardDrive },
+    { name: t.menuUploads, href: "/dashboard/uploads", icon: UploadCloud },
+    { name: t.menuFiles, href: "/dashboard/files", icon: FolderOpen },
+    { name: t.menuAnalytics, href: "/dashboard/analytics", icon: BarChart2 },
+    { name: t.menuSettings, href: "/dashboard/settings", icon: Settings },
+  ];
 
   const handleSignOut = async () => {
     await signOut();
@@ -39,33 +94,42 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-card border-r border-border flex flex-col shrink-0 h-screen sticky top-0 z-30 select-none transition-colors duration-200">
+    <aside className="w-64 bg-card border-r border-border flex flex-col shrink-0 h-screen sticky top-0 z-30 select-none transition-colors duration-200 shadow-md">
       {/* Brand Header */}
-      <div className="h-16 px-5 flex items-center gap-3 border-b border-border shrink-0">
-        <div className="size-8 rounded-xl bg-primary flex items-center justify-center shadow-sm text-primary-foreground font-bold shrink-0">
-          <Cloud className="size-4" />
-        </div>
-        <div className="flex flex-col min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="font-bold text-sm tracking-tight text-foreground">
-              SkyDrive
-            </span>
-            <Badge variant="outline" className="px-1 py-0 text-[9px] font-mono border-primary/30 text-primary">
-              v1.0
-            </Badge>
+      <div className="h-16 px-5 flex items-center gap-3 border-b border-border/70 shrink-0">
+        <Link href="/dashboard" className="flex items-center gap-3 min-w-0 group">
+          <div className="size-9 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-center p-1.5 shadow-inner group-hover:scale-105 transition-transform">
+            <Image
+              src="/SkyDrive.svg"
+              alt="SkyDrive"
+              width={32}
+              height={32}
+              className="size-full object-contain"
+            />
           </div>
-          <span className="text-[11px] text-muted-foreground truncate font-medium">
-            Unified Cloud Pool
-          </span>
-        </div>
+          <div className="flex flex-col min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-sm tracking-tight brand-text-gradient">
+                SkyDrive
+              </span>
+              <Badge variant="outline" className="px-1 py-0 text-[9px] font-mono border-primary/30 text-primary bg-primary/5">
+                v1.0
+              </Badge>
+            </div>
+            <span className="text-[10px] text-muted-foreground truncate font-mono">
+              Multi-Drive Pool
+            </span>
+          </div>
+        </Link>
       </div>
 
       {/* Navigation List */}
       <div className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        <div className="px-2 mb-2">
+        <div className="px-3 mb-2 flex items-center justify-between">
           <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted-foreground">
-            WORKSPACE
+            {t.sidebarWorkspace}
           </span>
+          <span className="size-1.5 rounded-full bg-primary/60" />
         </div>
         <nav className="space-y-1">
           {navigation.map((item) => {
@@ -73,46 +137,121 @@ export function Sidebar() {
             const Icon = item.icon;
             return (
               <Link
-                key={item.name}
+                key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150",
+                  "flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 group relative",
                   isActive
-                    ? "bg-primary text-primary-foreground font-bold shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                    ? "bg-gradient-to-r from-sky-500/15 to-indigo-600/15 border border-primary/40 text-foreground font-bold shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/60 hover:border hover:border-border/60"
                 )}
               >
                 <div className="flex items-center gap-2.5">
-                  <Icon className={cn("size-4", isActive ? "text-primary-foreground" : "text-muted-foreground")} />
+                  <Icon
+                    className={cn(
+                      "size-4 transition-colors",
+                      isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                    )}
+                  />
                   <span>{item.name}</span>
                 </div>
-                {isActive && <ChevronRight className="size-3.5 opacity-80" />}
+                {isActive && (
+                  <span className="size-1.5 rounded-full bg-primary shadow-sm shadow-primary/80 animate-pulse" />
+                )}
               </Link>
             );
           })}
         </nav>
       </div>
 
-      {/* Bottom Status & Profile */}
-      <div className="p-3 space-y-2.5 shrink-0 border-t border-border bg-muted/30">
-        {/* Engine Status Capsule */}
-        <div className="p-2.5 rounded-xl bg-card border border-border space-y-1 shadow-sm">
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-bold text-foreground text-[11px]">Storage Engine</span>
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-500">
-              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Online
-            </span>
+      {/* Bottom Storage Telemetry & Profile */}
+      <div className="p-3 shrink-0 border-t border-border/70 bg-secondary/30 space-y-2.5">
+        {/* Storage Breakdown & Total Progress Bar */}
+        <div className="p-3.5 rounded-2xl bg-card border border-border shadow-xs space-y-3.5">
+          {/* Vertical List of Categories */}
+          <div className="space-y-2.5 text-xs">
+            {/* Photo */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="size-5 rounded-md bg-lime-500/15 text-lime-500 flex items-center justify-center shrink-0 shadow-2xs">
+                  <ImageIcon className="size-3" />
+                </div>
+                <span className="font-medium text-foreground text-xs">{t.sidebarCategoryPhoto}</span>
+              </div>
+              <span className="font-bold text-foreground text-xs tracking-tight font-mono">
+                {formatBytes(Number(storageData?.breakdown?.photosSize || 0), 2)}
+              </span>
+            </div>
+
+            {/* Video */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="size-5 rounded-md bg-amber-500/15 text-amber-500 flex items-center justify-center shrink-0 shadow-2xs">
+                  <Video className="size-3" />
+                </div>
+                <span className="font-medium text-foreground text-xs">{t.sidebarCategoryVideo}</span>
+              </div>
+              <span className="font-bold text-foreground text-xs tracking-tight font-mono">
+                {formatBytes(Number(storageData?.breakdown?.videosSize || 0), 2)}
+              </span>
+            </div>
+
+            {/* Document */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="size-5 rounded-md bg-sky-500/15 text-sky-500 flex items-center justify-center shrink-0 shadow-2xs">
+                  <FileText className="size-3" />
+                </div>
+                <span className="font-medium text-foreground text-xs">{t.sidebarCategoryDocument}</span>
+              </div>
+              <span className="font-bold text-foreground text-xs tracking-tight font-mono">
+                {formatBytes(Number(storageData?.breakdown?.documentsSize || 0), 2)}
+              </span>
+            </div>
+
+            {/* Free Storage */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="size-5 rounded-md bg-orange-500/15 text-orange-500 flex items-center justify-center shrink-0 shadow-2xs">
+                  <HardDrive className="size-3" />
+                </div>
+                <span className="font-medium text-foreground text-xs">{t.sidebarCategoryFree}</span>
+              </div>
+              <span className="font-bold text-foreground text-xs tracking-tight font-mono">
+                {formatBytes(
+                  Number(
+                    storageData?.availableStorage ||
+                      storageData?.breakdown?.freeStorage ||
+                      0
+                  ),
+                  2
+                )}
+              </span>
+            </div>
           </div>
-          <p className="text-[10px] text-muted-foreground leading-tight">
-            Multi-Account sync active & ready.
-          </p>
+
+          <div className="pt-2 border-t border-border/70 space-y-2">
+            {/* Usage Line: e.g. 26.06 GB used of 60.00 GB */}
+            <div className="text-xs text-muted-foreground flex items-center gap-1 font-medium font-mono">
+              <span className="font-bold text-foreground">
+                {formatBytes(Number(storageData?.usedStorage || 0), 2)}
+              </span>
+              <span>{t.sidebarUsedOf} {formatBytes(Number(storageData?.totalStorage || 0), 2)}</span>
+            </div>
+
+            {/* Blue Progress Bar */}
+            <Progress
+              value={storageData?.usagePercentage || 0}
+              className="h-1.5 bg-muted rounded-full overflow-hidden"
+              indicatorColor="bg-blue-600 dark:bg-blue-500"
+            />
+          </div>
         </div>
 
-        {/* User Footer Card */}
-        <div className="p-2 rounded-xl bg-card border border-border flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-2 min-w-0 pr-1">
-            <Avatar className="size-8">
+        {/* User Card with Sign Out */}
+        <div className="p-2 rounded-xl bg-card border border-border flex items-center justify-between shadow-xs">
+          <div className="flex items-center gap-2.5 min-w-0 pr-1 flex-1">
+            <Avatar className="size-8 border border-border/60 shrink-0">
               {session?.user?.image && (
                 <AvatarImage
                   src={session.user.image}
@@ -128,7 +267,7 @@ export function Sidebar() {
               <span className="text-xs font-semibold text-foreground truncate max-w-[120px]">
                 {session?.user?.name || "Cloud User"}
               </span>
-              <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
+              <span className="text-[10px] text-muted-foreground truncate max-w-[120px] font-mono">
                 {session?.user?.email || "user@skydrive.app"}
               </span>
             </div>
@@ -138,7 +277,7 @@ export function Sidebar() {
             size="icon"
             onClick={handleSignOut}
             title="Sign Out"
-            className="size-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+            className="size-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer shrink-0"
           >
             <LogOut className="size-3.5" />
           </Button>
