@@ -3,7 +3,7 @@ import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
 import { db } from "@/lib/db";
 import { authMiddleware, type Env } from "../middleware/auth";
-import { createFolderInDrive } from "@/lib/google-drive";
+import { createFolderInDrive, getGoogleDriveClient } from "@/lib/google-drive";
 
 export const createFolderSchema = z.object({
   name: z.string().trim().min(1, { message: "Folder name is required" }),
@@ -11,11 +11,94 @@ export const createFolderSchema = z.object({
   parentFolderId: z.string().optional(),
 });
 
+export const listFoldersSchema = z.object({
+  accountId: z.string().optional(),
+  parentFolderId: z.string().optional().default("root"),
+});
+
 export type CreateFolderInput = z.infer<typeof createFolderSchema>;
 
 export const foldersRouter = new Hono<Env>()
   .use("*", authMiddleware)
 
+  // 1. List Folders for a given account and parent folder (Independent of UI search/filter)
+  .get("/", zValidator("query", listFoldersSchema), async (c) => {
+    const user = c.get("user");
+    const { accountId, parentFolderId } = c.req.valid("query");
+
+    const accountWhere = accountId
+      ? { id: accountId, userId: user.id, isActive: true }
+      : { userId: user.id, isActive: true };
+
+    const accounts = await db.storageAccount.findMany({
+      where: accountWhere,
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        availableStorage: true,
+        usagePercentage: true,
+      },
+    });
+
+    if (accounts.length === 0) {
+      return c.json({ folders: [], accounts: [] });
+    }
+
+    const currentParent = parentFolderId && parentFolderId !== "root" ? parentFolderId : "root";
+
+    const driveResults = await Promise.allSettled(
+      accounts.map(async (acc) => {
+        try {
+          const drive = await getGoogleDriveClient(acc.id);
+          const parentQuery =
+            currentParent === "root" ? "'root' in parents" : `'${currentParent}' in parents`;
+
+          const { data } = await drive.files.list({
+            q: `trashed = false and mimeType = 'application/vnd.google-apps.folder' and ${parentQuery}`,
+            pageSize: 100,
+            orderBy: "name",
+            fields: "files(id, name, mimeType, webViewLink, parents, modifiedTime)",
+          });
+
+          return (data.files || []).map((f) => ({
+            id: f.id!,
+            driveFileId: f.id!,
+            name: f.name!,
+            mimeType: f.mimeType!,
+            parentFolderId: currentParent,
+            isFolder: true,
+            updatedAt: f.modifiedTime || new Date().toISOString(),
+            account: {
+              id: acc.id,
+              email: acc.email,
+              displayName: acc.displayName,
+            },
+          }));
+        } catch (err) {
+          console.warn(`Could not list folders for ${acc.email}:`, err);
+          return [];
+        }
+      })
+    );
+
+    const folders = driveResults
+      .filter((r) => r.status === "fulfilled")
+      .flatMap((r) => (r as PromiseFulfilledResult<any[]>).value);
+
+    return c.json({
+      folders,
+      accounts: accounts.map((a) => ({
+        id: a.id,
+        email: a.email,
+        displayName: a.displayName,
+        availableStorage: a.availableStorage.toString(),
+        usagePercentage: a.usagePercentage,
+      })),
+    });
+  })
+
+  // 2. Create Folder
   .post(
     "/create",
     zValidator("json", createFolderSchema),

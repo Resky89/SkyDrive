@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react";
 import { motion } from "framer-motion";
-import { HardDrive, Plus, Zap, ArrowRight, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { FaGoogleDrive } from "react-icons/fa6";
 import { useLanguage } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
-export function StorageCalculator() {
+export const StorageCalculator = memo(function StorageCalculator() {
   const { t } = useLanguage();
   const [accountCount, setAccountCount] = useState<number>(3);
   const [hasWorkspace, setHasWorkspace] = useState<boolean>(true);
@@ -23,19 +24,19 @@ export function StorageCalculator() {
       : `${totalPooledGB} GB`;
 
   return (
-    <SpotlightCard className="p-8 sm:p-10 border border-border/80 relative overflow-hidden shadow-2xl">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+    <SpotlightCard className="p-6 sm:p-10 border border-border/80 relative overflow-hidden shadow-2xl">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch relative z-10">
         {/* Left Side: Interactive Controls */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="lg:col-span-7 flex flex-col justify-between space-y-6">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/25 text-primary text-[11px] font-mono font-semibold uppercase tracking-widest mb-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/25 text-primary text-xs font-medium mb-3">
               <Sparkles className="size-3" />
               <span>{t.calcTag}</span>
             </div>
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
+            <h3 className="text-[length:var(--text-2xl)] sm:text-[length:var(--text-3xl)] font-bold text-foreground">
               {t.calcTitle}
             </h3>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-2 leading-relaxed max-w-[54ch]">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-2 leading-[1.6] max-w-[54ch]">
               {t.calcSubtitle}
             </p>
           </div>
@@ -81,9 +82,10 @@ export function StorageCalculator() {
             <button
               type="button"
               onClick={() => setHasWorkspace(!hasWorkspace)}
-              className={`w-12 h-6 rounded-full transition-colors duration-200 relative cursor-pointer ${
+              className={cn(
+                "w-12 h-6 rounded-full transition-colors duration-200 relative cursor-pointer",
                 hasWorkspace ? "bg-primary" : "bg-muted"
-              }`}
+              )}
             >
               <motion.div
                 animate={{ x: hasWorkspace ? 26 : 2 }}
@@ -95,12 +97,12 @@ export function StorageCalculator() {
         </div>
 
         {/* Right Side: Visual Pool Result */}
-        <div className="lg:col-span-5 flex flex-col justify-center p-7 rounded-2xl bg-card/90 border border-border space-y-5 shadow-xl relative overflow-hidden">
+        <div className="lg:col-span-5 flex flex-col justify-between p-6 sm:p-7 rounded-2xl bg-secondary/35 border border-border/80 space-y-6 shadow-sm relative overflow-hidden h-full backdrop-blur-xs">
           <div className="space-y-1 text-center sm:text-left">
             <span className="text-[10px] font-mono uppercase text-muted-foreground tracking-wider font-semibold">
               {t.calcResultTitle}
             </span>
-            <div className="text-4xl sm:text-5xl font-extrabold text-foreground font-mono tracking-tight brand-text-gradient">
+            <div className="text-[length:var(--text-4xl)] sm:text-[length:var(--text-5xl)] font-bold text-foreground brand-text-gradient">
               {formattedCapacity}
             </div>
             <p className="text-[11px] text-muted-foreground font-mono">
@@ -109,7 +111,7 @@ export function StorageCalculator() {
           </div>
 
           {/* Segmented Pool Breakdown */}
-          <div className="space-y-2 pt-3 border-t border-border/70 text-xs font-mono">
+          <div className="space-y-2.5 pt-4 border-t border-border/70 text-xs font-mono">
             <div className="flex justify-between text-muted-foreground">
               <span>{t.calcBreakdownPersonal} ({accountCount} × 15 GB):</span>
               <span className="font-semibold text-foreground">{freeGB} GB</span>
@@ -120,13 +122,13 @@ export function StorageCalculator() {
                 <span className="font-semibold text-foreground">2,048 GB</span>
               </div>
             )}
-            <div className="flex justify-between text-emerald-500 font-semibold pt-1 border-t border-border/40">
+            <div className="flex justify-between text-emerald-500 font-semibold pt-1.5 border-t border-border/40">
               <span>{t.calcEfficiencyLabel}</span>
               <span>{t.calcEfficiencyValue}</span>
             </div>
           </div>
 
-          <Button asChild size="lg" className="w-full font-semibold gap-2 shadow-md">
+          <Button asChild size="lg" className="w-full font-semibold gap-2 shadow-md mt-auto">
             <Link href="/register">
               {t.calcCta}
               <ArrowRight className="size-4" />
@@ -136,4 +138,4 @@ export function StorageCalculator() {
       </div>
     </SpotlightCard>
   );
-}
+});

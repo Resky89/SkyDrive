@@ -8,7 +8,7 @@ import { signIn } from "@/lib/auth-client";
 import { Lock, Mail, Loader2, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -33,8 +33,10 @@ export default function LoginPage() {
         toast.error(res.error.message || "Invalid credentials");
       } else {
         toast.success("Welcome back to SkyDrive");
-        router.push("/dashboard");
-        router.refresh();
+        const callbackUrl = typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("callbackUrl") || "/dashboard"
+          : "/dashboard";
+        window.location.href = callbackUrl;
       }
     } catch {
       toast.error("Failed to sign in");
@@ -83,7 +85,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <Card className="p-6 shadow-sm border-border space-y-5">
+        <SpotlightCard className="p-6 sm:p-7 shadow-xl border border-border/80 space-y-5">
           {/* One-Click Google OAuth */}
           <Button
             type="button"
@@ -172,7 +174,7 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
-        </Card>
+        </SpotlightCard>
 
         {/* Footer Link */}
         <p className="text-center text-xs text-muted-foreground">

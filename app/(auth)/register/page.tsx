@@ -8,7 +8,7 @@ import { signUp, signIn } from "@/lib/auth-client";
 import { Lock, Mail, User, Loader2, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Card } from "@/components/ui/card";
+import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -34,8 +34,10 @@ export default function RegisterPage() {
         toast.error(res.error.message || "Registration failed");
       } else {
         toast.success("Account created successfully! Redirecting...");
-        router.push("/dashboard");
-        router.refresh();
+        const callbackUrl = typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("callbackUrl") || "/dashboard"
+          : "/dashboard";
+        window.location.href = callbackUrl;
       }
     } catch {
       toast.error("An error occurred during registration");
@@ -82,7 +84,7 @@ export default function RegisterPage() {
           </p>
         </div>
 
-        <Card className="p-6 shadow-sm border-border space-y-5">
+        <SpotlightCard className="p-6 sm:p-7 shadow-xl border border-border/80 space-y-5">
           <Button
             type="button"
             variant="outline"
@@ -181,7 +183,7 @@ export default function RegisterPage() {
               )}
             </Button>
           </form>
-        </Card>
+        </SpotlightCard>
 
         <p className="text-center text-xs text-muted-foreground">
           Already have an account?{" "}

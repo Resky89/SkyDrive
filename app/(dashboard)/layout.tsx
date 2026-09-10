@@ -1,11 +1,20 @@
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
 import { Sidebar } from "@/components/sidebar";
+import { Header } from "@/components/header";
 import { Particles } from "@/components/ui/particles";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) {
+    redirect("/login");
+  }
+
   return (
     <div className="h-screen w-screen bg-background text-foreground flex overflow-hidden relative">
       {/* Ambient Cloud Lights for Dashboard */}
@@ -16,9 +25,12 @@ export default function DashboardLayout({
       {/* Fixed Left Sidebar (Does not scroll away) */}
       <Sidebar />
 
-      {/* Main App Canvas: Scroll container with sticky App Bar */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto overflow-x-hidden relative z-10">
-        {children}
+      {/* Main App Canvas: Fixed Top AppBar with stable scrolling content */}
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden relative z-10">
+        <Header />
+        <div className="flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden scrollbar-stable">
+          {children}
+        </div>
       </div>
     </div>
   );

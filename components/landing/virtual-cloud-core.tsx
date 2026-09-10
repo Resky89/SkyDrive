@@ -1,18 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  HardDrive,
   Zap,
-  ShieldCheck,
   RefreshCw,
   CheckCircle2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { FaGoogleDrive } from "react-icons/fa6";
 import { useLanguage } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
 
 interface DriveNode {
   id: string;
@@ -54,40 +54,54 @@ const mockNodes: DriveNode[] = [
   },
 ];
 
-export function VirtualCloudCore() {
+const SIMULATION_FILES = [
+  { name: "Brand_Video_4K.mov", size: "3.8 GB" },
+  { name: "SkyDrive_Source.zip", size: "140 MB" },
+  { name: "Client_Database.sql", size: "820 MB" },
+];
+
+export const VirtualCloudCore = memo(function VirtualCloudCore() {
   const { t } = useLanguage();
   const [selectedNode, setSelectedNode] = useState<DriveNode>(mockNodes[1]);
-  const [simulatedFile, setSimulatedFile] = useState<string | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
   const [routedNode, setRoutedNode] = useState<string | null>(null);
+
+  const timer1Ref = useRef<NodeJS.Timeout | null>(null);
+  const timer2Ref = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timer1Ref.current) clearTimeout(timer1Ref.current);
+      if (timer2Ref.current) clearTimeout(timer2Ref.current);
+    };
+  }, []);
 
   // Total pooled calculation
   const totalPooledGB = mockNodes.reduce((acc, n) => acc + n.total, 0);
   const usedPooledGB = mockNodes.reduce((acc, n) => acc + n.used, 0);
   const pooledPct = ((usedPooledGB / totalPooledGB) * 100).toFixed(1);
 
-  const triggerUploadSimulation = (fileName: string, sizeGB: number) => {
+  const triggerUploadSimulation = () => {
     if (isSimulating) return;
     setIsSimulating(true);
-    setSimulatedFile(fileName);
     setRoutedNode(null);
 
     // Smart auto-routing logic
-    setTimeout(() => {
+    timer1Ref.current = setTimeout(() => {
       const best = mockNodes.reduce((prev, current) =>
         current.total - current.used > prev.total - prev.used ? current : prev
       );
       setRoutedNode(best.id);
       setSelectedNode(best);
 
-      setTimeout(() => {
+      timer2Ref.current = setTimeout(() => {
         setIsSimulating(false);
       }, 1600);
     }, 600);
   };
 
   return (
-    <div className="relative rounded-3xl glass-panel p-6 sm:p-8 border border-border/80 shadow-2xl overflow-hidden font-sans">
+    <SpotlightCard className="p-6 sm:p-8 border border-border/80 shadow-2xl font-sans">
       {/* Subtle ambient corner glows (static) */}
       <div className="absolute -top-16 -right-16 size-48 rounded-full bg-sky-500/15 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-16 -left-16 size-48 rounded-full bg-indigo-600/15 blur-3xl pointer-events-none" />
@@ -112,7 +126,7 @@ export function VirtualCloudCore() {
         </div>
       </div>
 
-      {/* ── Virtual Storage Aggregation Stage ── */}
+      {/* Virtual Storage Aggregation Stage */}
       <div className="relative rounded-2xl bg-secondary/30 border border-border/70 p-5 mb-6 space-y-4">
         {/* Core Cloud Identity */}
         <div className="flex items-center justify-between">
@@ -159,9 +173,11 @@ export function VirtualCloudCore() {
                 <div
                   key={node.id}
                   style={{ width: `${share}%` }}
-                  className={`h-full rounded-full bg-gradient-to-r ${node.color} mr-1 last:mr-0 transition-all ${
+                  className={cn(
+                    "h-full rounded-full bg-gradient-to-r mr-1 last:mr-0 transition-all",
+                    node.color,
                     isTarget ? "ring-2 ring-white scale-y-110 brightness-125" : "opacity-90"
-                  }`}
+                  )}
                   title={`${t[node.nameKey]}: ${node.used} GB / ${node.total} GB`}
                 />
               );
@@ -185,11 +201,12 @@ export function VirtualCloudCore() {
             <button
               key={node.id}
               onClick={() => setSelectedNode(node)}
-              className={`p-3 rounded-2xl text-left border transition-all duration-200 cursor-pointer relative overflow-hidden ${
+              className={cn(
+                "p-3 rounded-2xl text-left border transition-all duration-200 cursor-pointer relative overflow-hidden",
                 isSelected
                   ? "bg-card border-primary shadow-md shadow-primary/10 ring-1 ring-primary/40"
                   : "bg-card/40 border-border/70 hover:bg-card/80 hover:border-border"
-              }`}
+              )}
             >
               {isRouted && (
                 <div className="absolute inset-0 bg-primary/15 border-2 border-primary rounded-2xl pointer-events-none" />
@@ -230,15 +247,11 @@ export function VirtualCloudCore() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {[
-            { name: "Brand_Video_4K.mov", size: "3.8 GB", sizeGB: 3.8 },
-            { name: "SkyDrive_Source.zip", size: "140 MB", sizeGB: 0.14 },
-            { name: "Client_Database.sql", size: "820 MB", sizeGB: 0.82 },
-          ].map((file) => (
+          {SIMULATION_FILES.map((file) => (
             <button
               key={file.name}
               disabled={isSimulating}
-              onClick={() => triggerUploadSimulation(file.name, file.sizeGB)}
+              onClick={triggerUploadSimulation}
               className="px-3 py-1.5 rounded-xl bg-card border border-border text-xs font-mono flex items-center gap-2 hover:border-primary hover:text-primary transition-all duration-150 active:scale-95 disabled:opacity-50 cursor-pointer shadow-sm"
             >
               <span className="truncate max-w-[130px]">{file.name}</span>
@@ -269,6 +282,6 @@ export function VirtualCloudCore() {
           )}
         </AnimatePresence>
       </div>
-    </div>
+    </SpotlightCard>
   );
-}
+});

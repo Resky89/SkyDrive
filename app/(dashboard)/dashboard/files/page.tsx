@@ -1,99 +1,47 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Folder,
   FolderPlus,
   File,
-  Search,
-  Download,
-  Trash2,
-  ExternalLink,
   Loader2,
   UploadCloud,
-  FileText,
-  FileSpreadsheet,
-  Presentation,
-  Image as ImageIcon,
-  Video,
-  Music,
-  Archive,
   ChevronRight,
   Home,
-  LayoutGrid,
-  List as ListIcon,
   Users2,
   HardDrive,
-  Layers,
-  Eye,
-  MoreVertical,
-  Pencil,
-  FolderInput,
-  AlertTriangle,
-  CheckCircle2,
-  ArrowRight,
 } from "lucide-react";
-import { Header } from "@/components/header";
-import { formatBytes, cn } from "@/lib/utils";
-import { toast } from "sonner";
-import { Card } from "@/components/ui/card";
+import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import { useLanguage } from "@/lib/i18n";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
-interface CloudItem {
-  id: string;
-  name: string;
-  size: string;
-  mimeType: string;
-  driveFileId: string;
-  parentFolderId?: string | null;
-  isFolder: boolean;
-  status: string;
-  createdAt: string;
-  updatedAt: string;
-  webViewLink?: string;
-  thumbnailLink?: string | null;
-  iconLink?: string | null;
-  account: {
-    id: string;
-    email: string;
-    displayName?: string | null;
-  };
-}
-
-const TYPE_FILTERS = [
-  { id: "all", label: "Semua Tipe", icon: Layers },
-  { id: "folders", label: "Folder", icon: Folder },
-  { id: "documents", label: "Dokumen", icon: FileText },
-  { id: "spreadsheets", label: "Spreadsheet", icon: FileSpreadsheet },
-  { id: "presentations", label: "Presentasi", icon: Presentation },
-  { id: "photos", label: "Gambar", icon: ImageIcon },
-  { id: "videos", label: "Video", icon: Video },
-  { id: "pdfs", label: "PDF", icon: FileText },
-  { id: "archives", label: "Arsip", icon: Archive },
-];
+import { CloudItem, StorageAccountSummary, BreadcrumbItem } from "@/components/dashboard/files/types";
+import { useFileSelection } from "@/components/dashboard/files/use-file-selection";
+import { FileFilterBar } from "@/components/dashboard/files/file-filter-bar";
+import { FolderCard } from "@/components/dashboard/files/folder-card";
+import { FileCard } from "@/components/dashboard/files/file-card";
+import { FilesTableView } from "@/components/dashboard/files/files-table-view";
+import { FloatingBulkBar } from "@/components/dashboard/files/floating-bulk-bar";
+import { MoveModal } from "@/components/dashboard/files/modals/move-modal";
+import { BulkDeleteModal } from "@/components/dashboard/files/modals/bulk-delete-modal";
+import { DeleteModal } from "@/components/dashboard/files/modals/delete-modal";
+import { RenameModal } from "@/components/dashboard/files/modals/rename-modal";
+import { NewFolderModal } from "@/components/dashboard/files/modals/new-folder-modal";
+import { PreviewModal } from "@/components/dashboard/files/modals/preview-modal";
+import { MarqueeOverlay } from "@/components/dashboard/files/marquee-overlay";
 
 export default function FileExplorerPage() {
-  const { t } = useLanguage();
-  // Scope: "mydrive" (Drive Saya) vs "sharedWithMe" (Dibagikan kepada saya)
+  // Navigation & Scope
   const [scope, setScope] = useState<"mydrive" | "sharedWithMe">("mydrive");
+  const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([
+    { id: "root", name: "Drive Saya" },
+  ]);
+  const currentFolderId = breadcrumbs[breadcrumbs.length - 1]?.id || "root";
 
+  // Data & Pagination
   const [folders, setFolders] = useState<CloudItem[]>([]);
   const [files, setFiles] = useState<CloudItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,68 +49,70 @@ export default function FileExplorerPage() {
   const [page, setPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  const [accounts, setAccounts] = useState<StorageAccountSummary[]>([]);
 
+  // Filter States
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState("all");
   const [sortFilter, setSortFilter] = useState("name_asc");
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [accounts, setAccounts] = useState<
-    Array<{ id: string; email: string; availableStorage: string; usagePercentage: number }>
-  >([]);
 
-  // Folder navigation history: [{ id: "root", name: "Drive Saya" }]
-  const [breadcrumbs, setBreadcrumbs] = useState<Array<{ id: string; name: string }>>([
-    { id: "root", name: "Drive Saya" },
-  ]);
-  const currentFolderId = breadcrumbs[breadcrumbs.length - 1].id;
-
-  // New Folder Modal
+  // Modals & Active Actions
   const [isNewFolderOpen, setIsNewFolderOpen] = useState(false);
-  const [newFolderName, setNewFolderName] = useState("");
-  const [creatingFolder, setCreatingFolder] = useState(false);
-
-  // Quick Preview Modal
   const [previewItem, setPreviewItem] = useState<CloudItem | null>(null);
-
-  // Rename Item Modal
   const [renameItem, setRenameItem] = useState<CloudItem | null>(null);
-  const [renameValue, setRenameValue] = useState("");
-  const [isRenaming, setIsRenaming] = useState(false);
-
-  // Delete Item Modal (replaces window.confirm)
   const [deleteItem, setDeleteItem] = useState<CloudItem | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [moveItems, setMoveItems] = useState<CloudItem[]>([]);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
 
-  // Move Item Modal
-  const [moveItem, setMoveItem] = useState<CloudItem | null>(null);
-  const [moveTargetFolderId, setMoveTargetFolderId] = useState<string>("root");
-  const [moveFolderQuery, setMoveFolderQuery] = useState("");
-  const [isMoving, setIsMoving] = useState(false);
+  // Upload, Download & Drag State
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
-
-  // Drag and Drop State for moving files/folders
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgressText, setUploadProgressText] = useState("");
   const [draggedItem, setDraggedItem] = useState<CloudItem | null>(null);
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
 
-  // Upload state
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgressText, setUploadProgressText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
-
-  // Intersection observer sentinel for lazy loading
   const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
 
+  const allCurrentItems = [...folders, ...files];
+  const isAnyModalOpen = Boolean(
+    isNewFolderOpen ||
+      previewItem ||
+      renameItem ||
+      deleteItem ||
+      moveItems.length > 0 ||
+      isBulkDeleteOpen
+  );
+
+  // Google Drive Style Selection Hook (Click, Ctrl+Click, Shift+Click, Marquee Lasso, Shortcuts)
+  const {
+    selectedIds,
+    setSelectedIds,
+    selectedItems,
+    explorerContainerRef,
+    isMarqueeActive,
+    marqueeRect,
+    registerItemRef,
+    handleItemClick,
+    handleSelectAll,
+    handleClearSelection,
+    handleContainerMouseDown,
+  } = useFileSelection({
+    items: allCurrentItems,
+    isModalOpen: isAnyModalOpen,
+    onBulkDeleteRequest: () => setIsBulkDeleteOpen(true),
+  });
+
+  // Fetch Items from Backend API
   const fetchItems = useCallback(
     async (pageToFetch = 1, isAppending = false) => {
       try {
-        if (isAppending) {
-          setLoadingMore(true);
-        } else {
-          setLoading(true);
-        }
+        if (isAppending) setLoadingMore(true);
+        else setLoading(true);
 
         const params = new URLSearchParams();
         params.append("page", pageToFetch.toString());
@@ -180,7 +130,7 @@ export default function FileExplorerPage() {
         const res = await fetch(`/api/files?${params.toString()}`);
         if (res.ok) {
           const data = await res.json();
-          const deduplicateById = (items: CloudItem[]) => {
+          const deduplicate = (items: CloudItem[]) => {
             const seen = new Set<string>();
             return (items || []).filter((item) => {
               if (!item?.id || seen.has(item.id)) return false;
@@ -190,35 +140,43 @@ export default function FileExplorerPage() {
           };
 
           if (isAppending) {
-            setFolders((prev) => deduplicateById([...prev, ...(data.folders || [])]));
-            setFiles((prev) => deduplicateById([...prev, ...(data.files || [])]));
+            setFolders((prev) => deduplicate([...prev, ...(data.folders || [])]));
+            setFiles((prev) => deduplicate([...prev, ...(data.files || [])]));
           } else {
-            setFolders(deduplicateById(data.folders || []));
-            setFiles(deduplicateById(data.files || []));
+            setFolders(deduplicate(data.folders || []));
+            setFiles(deduplicate(data.files || []));
           }
 
           setTotalItems(data.total || 0);
-          setHasMore(data.hasMore || false);
+          setHasMore(Boolean(data.hasMore));
           setPage(pageToFetch);
-          if (data.accounts) setAccounts(data.accounts);
+
+          if (data.accounts) {
+            setAccounts(data.accounts);
+          }
         }
       } catch {
-        toast.error("Gagal memuat item dari cloud pool");
+        toast.error("Gagal memuat file dari Google Drive");
       } finally {
         setLoading(false);
         setLoadingMore(false);
       }
     },
-    [scope, query, selectedAccountId, typeFilter, dateFilter, sortFilter, currentFolderId]
+    [currentFolderId, dateFilter, query, scope, selectedAccountId, sortFilter, typeFilter]
   );
 
-  // Initial fetch / Reset on filter change
   useEffect(() => {
-    setPage(1);
     fetchItems(1, false);
+    setSelectedIds(new Set());
+  }, [fetchItems, currentFolderId, scope, query, typeFilter, dateFilter, sortFilter, selectedAccountId, setSelectedIds]);
+
+  useEffect(() => {
+    const handleRefresh = () => fetchItems(1, false);
+    window.addEventListener("skydrive:refresh", handleRefresh);
+    return () => window.removeEventListener("skydrive:refresh", handleRefresh);
   }, [fetchItems]);
 
-  // Lazy loading observer
+  // Lazy Loading Observer
   useEffect(() => {
     if (!hasMore || loading || loadingMore) return;
 
@@ -233,63 +191,29 @@ export default function FileExplorerPage() {
 
     const target = loadMoreSentinelRef.current;
     if (target) observer.observe(target);
-
     return () => {
       if (target) observer.unobserve(target);
     };
   }, [hasMore, loading, loadingMore, page, fetchItems]);
 
-  // Navigate into a folder
+  // Navigation Handlers
   const handleOpenFolder = (folder: CloudItem) => {
     setBreadcrumbs((prev) => [...prev, { id: folder.driveFileId, name: folder.name }]);
   };
 
-  // Navigate via breadcrumbs
   const handleNavigateBreadcrumb = (index: number) => {
     setBreadcrumbs((prev) => prev.slice(0, index + 1));
   };
 
-  // Switch Scope (Drive Saya vs Dibagikan kepada Saya)
   const handleSwitchScope = (newScope: "mydrive" | "sharedWithMe") => {
     if (scope === newScope) return;
     setScope(newScope);
-    setBreadcrumbs([{ id: "root", name: newScope === "mydrive" ? "Drive Saya" : "Dibagikan kepada saya" }]);
+    setBreadcrumbs([
+      { id: "root", name: newScope === "mydrive" ? "Drive Saya" : "Dibagikan kepada saya" },
+    ]);
   };
 
-  // Create new folder
-  const handleCreateFolder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newFolderName.trim()) return;
-
-    setCreatingFolder(true);
-    try {
-      const res = await fetch("/api/folders/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: newFolderName.trim(),
-          accountId: selectedAccountId || undefined,
-          parentFolderId: currentFolderId !== "root" ? currentFolderId : undefined,
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        toast.success(`Folder "${newFolderName}" berhasil dibuat`);
-        setNewFolderName("");
-        setIsNewFolderOpen(false);
-        fetchItems(1, false);
-      } else {
-        toast.error(data.error || "Gagal membuat folder");
-      }
-    } catch {
-      toast.error("Terjadi kesalahan saat membuat folder");
-    } finally {
-      setCreatingFolder(false);
-    }
-  };
-
-  // Handle batch file / folder upload
+  // Upload Handlers
   const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
     if (!selectedFiles || selectedFiles.length === 0) return;
@@ -330,129 +254,12 @@ export default function FileExplorerPage() {
     fetchItems(1, false);
   };
 
-  const handleOpenRename = (item: CloudItem, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    toast.dismiss();
-    setRenameItem(item);
-    setRenameValue(item.name);
-  };
-
-  const handleConfirmRename = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!renameItem || !renameValue.trim()) return;
-
-    setIsRenaming(true);
-    try {
-      const res = await fetch(`/api/files/${renameItem.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: renameValue.trim() }),
-      });
-
-      if (res.ok) {
-        toast.success(t.renameSuccess);
-        const updatedName = renameValue.trim();
-        if (renameItem.isFolder) {
-          setFolders((prev) =>
-            prev.map((f) => (f.id === renameItem.id ? { ...f, name: updatedName } : f))
-          );
-        } else {
-          setFiles((prev) =>
-            prev.map((f) => (f.id === renameItem.id ? { ...f, name: updatedName } : f))
-          );
-        }
-        setRenameItem(null);
-      } else {
-        toast.error("Gagal mengubah nama item di Google Drive");
-      }
-    } catch {
-      toast.error("Terjadi kesalahan saat mengubah nama");
-    } finally {
-      setIsRenaming(false);
-    }
-  };
-
-  // Delete Handlers using Modal
-  const handleOpenDelete = (item: CloudItem, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    toast.dismiss();
-    setDeleteItem(item);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!deleteItem) return;
-
-    setIsDeleting(true);
-    try {
-      const res = await fetch(`/api/files/${deleteItem.id}`, { method: "DELETE" });
-      if (res.ok) {
-        toast.success(`Berhasil menghapus ${deleteItem.name}`);
-        if (deleteItem.isFolder) {
-          setFolders((prev) => prev.filter((f) => f.id !== deleteItem.id));
-        } else {
-          setFiles((prev) => prev.filter((f) => f.id !== deleteItem.id));
-        }
-        setTotalItems((prev) => Math.max(0, prev - 1));
-        setDeleteItem(null);
-      } else {
-        toast.error("Gagal menghapus item dari Google Drive");
-      }
-    } catch {
-      toast.error("Kesalahan jaringan saat menghapus");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  // Move Handlers using Modal
-  const handleOpenMove = (item: CloudItem, e?: React.MouseEvent) => {
-    e?.stopPropagation();
-    toast.dismiss();
-    setMoveItem(item);
-    setMoveTargetFolderId("root");
-    setMoveFolderQuery("");
-  };
-
-  const handleConfirmMove = async (destinationId = moveTargetFolderId) => {
-    if (!moveItem) return;
-
-    setIsMoving(true);
-    try {
-      const res = await fetch(`/api/files/${moveItem.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ destinationFolderId: destinationId }),
-      });
-
-      if (res.ok) {
-        toast.success(t.moveSuccess);
-        // Remove item from current view if moved to another destination
-        if (destinationId !== currentFolderId) {
-          if (moveItem.isFolder) {
-            setFolders((prev) => prev.filter((f) => f.id !== moveItem.id));
-          } else {
-            setFiles((prev) => prev.filter((f) => f.id !== moveItem.id));
-          }
-          setTotalItems((prev) => Math.max(0, prev - 1));
-        }
-        setMoveItem(null);
-      } else {
-        toast.error("Gagal memindahkan item di Google Drive");
-      }
-    } catch {
-      toast.error("Kesalahan jaringan saat memindahkan item");
-    } finally {
-      setIsMoving(false);
-    }
-  };
-
   // File Download Handler
   const handleDownloadFile = (file: CloudItem, e?: React.MouseEvent) => {
     e?.stopPropagation();
     try {
       setDownloadingId(file.id);
       toast.info(`Memulai pengunduhan ${file.name}...`);
-
       const link = document.createElement("a");
       link.href = `/api/files/${file.id}/download`;
       link.download = file.name;
@@ -469,7 +276,16 @@ export default function FileExplorerPage() {
   // Drag and Drop Internal Move Handlers
   const handleDragStartItem = (e: React.DragEvent, item: CloudItem) => {
     e.stopPropagation();
+    let itemsToDrag: CloudItem[] = [];
+    if (!selectedIds.has(item.id)) {
+      setSelectedIds(new Set([item.id]));
+      itemsToDrag = [item];
+    } else {
+      itemsToDrag = selectedItems;
+    }
+
     setDraggedItem(item);
+    e.dataTransfer.setData("application/skydrive-items", JSON.stringify(itemsToDrag));
     e.dataTransfer.setData("application/skydrive-item", JSON.stringify(item));
     e.dataTransfer.effectAllowed = "move";
   };
@@ -480,13 +296,11 @@ export default function FileExplorerPage() {
   };
 
   const handleDragOverTargetFolder = (e: React.DragEvent, folderId: string) => {
-    if (!draggedItem || draggedItem.id === folderId) return;
+    if (!draggedItem || draggedItem.id === folderId || selectedIds.has(folderId)) return;
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = "move";
-    if (dragOverFolderId !== folderId) {
-      setDragOverFolderId(folderId);
-    }
+    if (dragOverFolderId !== folderId) setDragOverFolderId(folderId);
   };
 
   const handleDragLeaveTargetFolder = (e: React.DragEvent) => {
@@ -504,16 +318,28 @@ export default function FileExplorerPage() {
     e.stopPropagation();
     setDragOverFolderId(null);
 
-    const itemData = e.dataTransfer.getData("application/skydrive-item");
-    if (itemData) {
-      try {
-        const item: CloudItem = JSON.parse(itemData);
-        if (item.id === destinationId) return;
+    const rawData =
+      e.dataTransfer.getData("application/skydrive-items") ||
+      e.dataTransfer.getData("application/skydrive-item");
+    if (!rawData) return;
 
-        toast.loading(`Memindahkan "${item.name}" ke "${destinationName}"...`, {
-          id: `move-${item.id}`,
-        });
+    try {
+      let itemsToMove: CloudItem[] = [];
+      const parsed = JSON.parse(rawData);
+      if (Array.isArray(parsed)) itemsToMove = parsed;
+      else itemsToMove = [parsed];
 
+      itemsToMove = itemsToMove.filter(
+        (i) => i.id !== destinationId && i.driveFileId !== destinationId
+      );
+      if (itemsToMove.length === 0) return;
+
+      toast.loading(`Memindahkan ${itemsToMove.length} item ke "${destinationName}"...`, {
+        id: "drag-move-toast",
+      });
+
+      if (itemsToMove.length === 1) {
+        const item = itemsToMove[0];
         const res = await fetch(`/api/files/${item.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -522,132 +348,71 @@ export default function FileExplorerPage() {
 
         if (res.ok) {
           toast.success(`Berhasil memindahkan "${item.name}" ke "${destinationName}"`, {
-            id: `move-${item.id}`,
+            id: "drag-move-toast",
           });
-          if (item.isFolder) {
-            setFolders((prev) => prev.filter((f) => f.id !== item.id));
-          } else {
-            setFiles((prev) => prev.filter((f) => f.id !== item.id));
-          }
-          setTotalItems((prev) => Math.max(0, prev - 1));
+          setSelectedIds((prev) => {
+            const next = new Set(prev);
+            next.delete(item.id);
+            return next;
+          });
+          fetchItems(1, false);
         } else {
-          toast.error("Gagal memindahkan item di Google Drive", {
-            id: `move-${item.id}`,
-          });
+          toast.error("Gagal memindahkan item di Google Drive", { id: "drag-move-toast" });
         }
-      } catch {
-        toast.error("Gagal memproses pemindahan item", {
-          id: `move-err`,
+      } else {
+        const res = await fetch("/api/files/bulk-move", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            itemIds: itemsToMove.map((i) => i.id),
+            destinationFolderId: destinationId,
+          }),
         });
-      } finally {
-        setDraggedItem(null);
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          toast.success(`Berhasil memindahkan ${data.movedCount} item ke "${destinationName}"`, {
+            id: "drag-move-toast",
+          });
+          setSelectedIds(new Set());
+          fetchItems(1, false);
+        } else {
+          toast.error(data.error || "Gagal memindahkan beberapa item", { id: "drag-move-toast" });
+        }
       }
+    } catch {
+      toast.error("Gagal memproses pemindahan item", { id: "drag-move-toast" });
+    } finally {
+      setDraggedItem(null);
     }
   };
 
-  const getFileIconComponent = (mimeType: string) => {
-    if (mimeType === "application/vnd.google-apps.folder") return Folder;
-    if (mimeType.startsWith("image/")) return ImageIcon;
-    if (mimeType.startsWith("video/")) return Video;
-    if (mimeType.startsWith("audio/")) return Music;
-    if (mimeType.includes("pdf")) return FileText;
-    if (mimeType.includes("spreadsheet") || mimeType.includes("excel")) return FileSpreadsheet;
-    if (mimeType.includes("presentation") || mimeType.includes("powerpoint")) return Presentation;
-    if (mimeType.includes("zip") || mimeType.includes("tar") || mimeType.includes("archive")) return Archive;
-    return File;
-  };
-
-  const currentItemCount = folders.length + files.length;
-
   return (
     <div className="flex-1 flex flex-col min-w-0 pb-16">
-      <Header accounts={accounts} onRefresh={() => fetchItems(1, false)} />
+      <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto w-full">
+        {/* Hidden Inputs for File/Folder Upload */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={handleFilesSelected}
+        />
+        <input
+          ref={folderInputRef}
+          type="file"
+          // @ts-expect-error webkitdirectory is standard for folder upload
+          webkitdirectory=""
+          directory=""
+          multiple
+          className="hidden"
+          onChange={handleFilesSelected}
+        />
 
-      <main className="px-8 py-7 max-w-6xl w-full mx-auto space-y-6 animate-fade-in">
-        {/* Top Action & Navigation Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground">
-              Unified File & Folder Explorer
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Jelajahi, cari, dan kelola seluruh file serta folder dari seluruh akun Google Drive Anda dengan live thumbnail.
-            </p>
-          </div>
-
-          {/* Quick Action Upload Buttons */}
-          <div className="flex items-center gap-2">
-            {/* Hidden Input for Files */}
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFilesSelected}
-              multiple
-              className="hidden"
-            />
-            {/* Hidden Input for Folders */}
-            <input
-              type="file"
-              ref={folderInputRef}
-              onChange={handleFilesSelected}
-              {...({ webkitdirectory: "", directory: "" } as any)}
-              multiple
-              className="hidden"
-            />
-
-            {/* New Folder Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                toast.dismiss();
-                setIsNewFolderOpen(true);
-              }}
-              className="gap-1.5 text-xs shadow-sm"
-            >
-              <FolderPlus className="size-3.5 text-primary" />
-              <span>New Folder</span>
-            </Button>
-
-            {/* Upload Folder Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => folderInputRef.current?.click()}
-              disabled={isUploading}
-              className="gap-1.5 text-xs shadow-sm"
-            >
-              <Folder className="size-3.5 text-amber-500" />
-              <span>Upload Folder</span>
-            </Button>
-
-            {/* Upload Files Button */}
-            <Button
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              className="gap-1.5 text-xs font-semibold shadow-sm"
-            >
-              <UploadCloud className="size-3.5" />
-              <span>Upload Files</span>
-            </Button>
-          </div>
-        </div>
-
-        {/* Upload in Progress Alert Banner */}
-        {isUploading && (
-          <div className="p-3.5 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-between text-xs text-primary animate-pulse">
-            <div className="flex items-center gap-2">
-              <Loader2 className="size-4 animate-spin" />
-              <span className="font-semibold">{uploadProgressText || "Mengunggah ke pool Google Drive…"}</span>
-            </div>
-            <span className="text-[11px] font-mono">Routing pintar ke storage dengan sisa ruang terbesar</span>
-          </div>
-        )}
-
-        {/* Scope Tabs: Drive Saya vs Dibagikan kepada Saya */}
-        <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
-          <div className="flex items-center gap-2 bg-muted/60 p-1 rounded-xl border border-border">
+        {/* Top Header Controls Bar */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          {/* Drive Scope Switcher */}
+          <div className="flex items-center gap-1.5 p-1 bg-muted/60 border border-border rounded-xl">
             <button
               type="button"
               onClick={() => handleSwitchScope("mydrive")}
@@ -676,17 +441,52 @@ export default function FileExplorerPage() {
             </button>
           </div>
 
-          {/* Item Counter Badge */}
-          <div className="text-[11px] font-mono text-muted-foreground flex items-center gap-1.5">
-            <span>Menampilkan</span>
-            <Badge variant="outline" className="text-[11px] font-mono px-2 py-0.5">
-              {currentItemCount} dari {totalItems} item
-            </Badge>
+          {/* Action Buttons: New Folder, Upload File, Upload Folder */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsNewFolderOpen(true)}
+              className="gap-1.5 text-xs h-9 shadow-xs"
+            >
+              <FolderPlus className="size-3.5 text-primary" />
+              <span>Folder Baru</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => folderInputRef.current?.click()}
+              disabled={isUploading}
+              className="gap-1.5 text-xs h-9 shadow-xs hidden md:inline-flex"
+            >
+              <UploadCloud className="size-3.5" />
+              <span>Upload Folder</span>
+            </Button>
+
+            <Button
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="gap-1.5 text-xs h-9 font-semibold shadow-xs"
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" />
+                  <span className="truncate max-w-[120px]">{uploadProgressText || "Mengunggah…"}</span>
+                </>
+              ) : (
+                <>
+                  <UploadCloud className="size-3.5" />
+                  <span>Upload File</span>
+                </>
+              )}
+            </Button>
           </div>
         </div>
 
         {/* Breadcrumb Navigation Bar */}
-        <div className="flex items-center gap-1.5 text-xs font-medium bg-card border border-border p-2.5 rounded-xl shadow-sm overflow-x-auto">
+        <div className="flex items-center gap-1.5 text-xs font-medium bg-card border border-border p-2.5 rounded-xl shadow-xs overflow-x-auto">
           {breadcrumbs.map((b, idx) => {
             const isLast = idx === breadcrumbs.length - 1;
             return (
@@ -717,138 +517,47 @@ export default function FileExplorerPage() {
           })}
         </div>
 
-        {/* Google Drive-Style Filter Bar */}
-        <div className="space-y-3">
-          {/* Top Control Strip */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            {/* Search Input */}
-            <div className="relative w-full sm:w-72">
-              <Search className="size-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Cari di seluruh file & folder..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="pl-8 text-xs h-9"
-              />
-            </div>
+        {/* Modular Filter Bar */}
+        <FileFilterBar
+          query={query}
+          onQueryChange={setQuery}
+          selectedAccountId={selectedAccountId}
+          onAccountIdChange={setSelectedAccountId}
+          dateFilter={dateFilter}
+          onDateFilterChange={setDateFilter}
+          sortFilter={sortFilter}
+          onSortFilterChange={setSortFilter}
+          typeFilter={typeFilter}
+          onTypeFilterChange={setTypeFilter}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          accounts={accounts}
+        />
 
-            {/* Dropdown Filters (Account, Date, Sort, View Toggle) */}
-            <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto">
-              {/* Account Pool Dropdown */}
-              <select
-                value={selectedAccountId}
-                onChange={(e) => setSelectedAccountId(e.target.value)}
-                className="h-9 rounded-xl border border-input bg-card px-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer"
-              >
-                <option value="">Semua Storage Pool</option>
-                {accounts.map((acc) => (
-                  <option key={acc.id} value={acc.id}>
-                    {acc.email}
-                  </option>
-                ))}
-              </select>
-
-              {/* Modified Date Filter */}
-              <select
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="h-9 rounded-xl border border-input bg-card px-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer"
-              >
-                <option value="all">Kapan saja</option>
-                <option value="today">Hari ini</option>
-                <option value="week">7 hari terakhir</option>
-                <option value="month">30 hari terakhir</option>
-                <option value="year">Tahun ini</option>
-              </select>
-
-              {/* Sort By Dropdown */}
-              <select
-                value={sortFilter}
-                onChange={(e) => setSortFilter(e.target.value)}
-                className="h-9 rounded-xl border border-input bg-card px-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer"
-              >
-                <option value="name_asc">Nama (A ke Z)</option>
-                <option value="name_desc">Nama (Z ke A)</option>
-                <option value="date_desc">Terakhir diubah (terbaru)</option>
-                <option value="date_asc">Terakhir diubah (terlama)</option>
-                <option value="size_desc">Ukuran (terbesar)</option>
-                <option value="size_asc">Ukuran (terkecil)</option>
-              </select>
-
-              {/* View Toggle */}
-              <div className="border border-border rounded-xl p-0.5 bg-card flex items-center shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setViewMode("grid")}
-                  className={cn(
-                    "p-1.5 rounded-lg transition-colors cursor-pointer",
-                    viewMode === "grid" ? "bg-accent text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                  )}
-                  title="Grid View"
-                >
-                  <LayoutGrid className="size-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode("list")}
-                  className={cn(
-                    "p-1.5 rounded-lg transition-colors cursor-pointer",
-                    viewMode === "list" ? "bg-accent text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                  )}
-                  title="List View"
-                >
-                  <ListIcon className="size-3.5" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Type Filter Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-            {TYPE_FILTERS.map((tf) => {
-              const Icon = tf.icon;
-              const isSelected = typeFilter === tf.id;
-              return (
-                <button
-                  key={tf.id}
-                  type="button"
-                  onClick={() => setTypeFilter(tf.id)}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border",
-                    isSelected
-                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                      : "bg-card text-muted-foreground border-border hover:text-foreground hover:bg-accent"
-                  )}
-                >
-                  <Icon className="size-3.5" />
-                  <span>{tf.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Content Stream: Folders & Files */}
+        {/* Main Content Explorer */}
         {loading ? (
-          <div className="py-24 text-center flex flex-col items-center justify-center space-y-3">
-            <Loader2 className="size-6 text-primary animate-spin" />
-            <span className="text-xs text-muted-foreground">Memuat file & folder dari cloud pool...</span>
-          </div>
+          <SpotlightCard className="p-16 text-center flex flex-col items-center justify-center space-y-3 shadow-xs border border-border">
+            <Loader2 className="size-8 text-primary animate-spin" />
+            <p className="text-xs font-mono text-muted-foreground">
+              Menghubungkan & menyinkronkan data Google Drive…
+            </p>
+          </SpotlightCard>
         ) : folders.length === 0 && files.length === 0 ? (
           /* Empty State */
-          <Card className="p-16 text-center flex flex-col items-center justify-center space-y-4 shadow-sm border-border">
-            <div className="size-14 rounded-2xl bg-muted border border-border flex items-center justify-center text-muted-foreground shadow-sm">
+          <SpotlightCard className="p-16 text-center flex flex-col items-center justify-center space-y-4 shadow-xs border border-border">
+            <div className="size-14 rounded-2xl bg-muted border border-border flex items-center justify-center text-muted-foreground shadow-xs">
               {scope === "sharedWithMe" ? <Users2 className="size-7" /> : <Folder className="size-7" />}
             </div>
             <div className="space-y-1 max-w-sm">
               <h3 className="text-sm font-bold text-foreground">
-                {scope === "sharedWithMe" ? "Tidak Ada File yang Dibagikan" : "Tidak Ada Item di Direktori Ini"}
+                {scope === "sharedWithMe"
+                  ? "Tidak Ada File yang Dibagikan"
+                  : "Tidak Ada Item di Direktori Ini"}
               </h3>
               <p className="text-xs text-muted-foreground">
                 {scope === "sharedWithMe"
                   ? "File atau folder yang dibagikan oleh orang lain ke akun Google Anda akan muncul di sini."
-                  : "Unggah file, buat folder baru, atau upload satu folder utuh untuk mengatur penyimpanan Anda."}
+                  : "Unggah file atau buat folder baru untuk mengatur penyimpanan cloud pool Anda."}
               </p>
             </div>
             {scope === "mydrive" && (
@@ -865,16 +574,20 @@ export default function FileExplorerPage() {
                 <Button
                   size="sm"
                   onClick={() => fileInputRef.current?.click()}
-                  className="gap-1.5 text-xs font-semibold shadow-sm"
+                  className="gap-1.5 text-xs font-semibold shadow-xs"
                 >
                   <UploadCloud className="size-3.5" />
                   <span>Upload File</span>
                 </Button>
               </div>
             )}
-          </Card>
+          </SpotlightCard>
         ) : (
-          <div className="space-y-6">
+          <div
+            ref={explorerContainerRef}
+            onMouseDown={handleContainerMouseDown}
+            className="space-y-6 select-none"
+          >
             {/* 1. Folders Section */}
             {folders.length > 0 && (
               <div className="space-y-3">
@@ -885,70 +598,37 @@ export default function FileExplorerPage() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 items-stretch">
                   {folders.map((folder, idx) => (
-                    <Card
+                    <FolderCard
                       key={`folder-${folder.id}-${idx}`}
-                      draggable={true}
-                      onDragStart={(e) => handleDragStartItem(e, folder)}
+                      folder={folder}
+                      index={idx}
+                      isSelected={selectedIds.has(folder.id)}
+                      isDragOver={dragOverFolderId === folder.id}
+                      isBeingDragged={draggedItem?.id === folder.id}
+                      onItemClick={handleItemClick}
+                      onItemDoubleClick={handleOpenFolder}
+                      onOpenFolder={handleOpenFolder}
+                      onOpenMove={(f, e) => {
+                        e?.stopPropagation();
+                        setMoveItems([f]);
+                      }}
+                      onOpenRename={(f, e) => {
+                        e?.stopPropagation();
+                        setRenameItem(f);
+                      }}
+                      onOpenDelete={(f, e) => {
+                        e?.stopPropagation();
+                        setDeleteItem(f);
+                      }}
+                      onDragStart={handleDragStartItem}
                       onDragEnd={handleDragEndItem}
-                      onDragOver={(e) => handleDragOverTargetFolder(e, folder.id)}
+                      onDragOver={handleDragOverTargetFolder}
                       onDragLeave={handleDragLeaveTargetFolder}
-                      onDrop={(e) => handleDropOnTargetFolder(e, folder.driveFileId || folder.id, folder.name)}
-                      onClick={() => handleOpenFolder(folder)}
-                      className={cn(
-                        "p-3.5 flex items-center justify-between gap-3 border-border hover:border-primary/40 hover:bg-accent/40 transition-all cursor-pointer group card-hover relative",
-                        dragOverFolderId === folder.id && "ring-2 ring-primary border-primary bg-primary/10 scale-[1.02] shadow-md",
-                        draggedItem?.id === folder.id && "opacity-50 border-dashed"
-                      )}
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="size-8 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                          <Folder className="size-4" />
-                        </div>
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors">
-                            {folder.name}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground font-mono truncate">
-                            {folder.account.email}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-7 rounded-lg text-muted-foreground hover:text-foreground"
-                              title={t.actionMore}
-                            >
-                              <MoreVertical className="size-3.5" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem onClick={(e) => handleOpenMove(folder, e)} className="gap-2 text-xs">
-                              <FolderInput className="size-3.5 text-muted-foreground" />
-                              <span>{t.actionMove}</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => handleOpenRename(folder, e)} className="gap-2 text-xs">
-                              <Pencil className="size-3.5 text-muted-foreground" />
-                              <span>{t.actionRename}</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={(e) => handleOpenDelete(folder, e)}
-                              className="gap-2 text-xs text-destructive focus:text-destructive focus:bg-destructive/10"
-                            >
-                              <Trash2 className="size-3.5 text-destructive" />
-                              <span>{t.actionDelete}</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </Card>
+                      onDrop={handleDropOnTargetFolder}
+                      registerRef={registerItemRef}
+                    />
                   ))}
                 </div>
               </div>
@@ -965,313 +645,68 @@ export default function FileExplorerPage() {
                 </div>
 
                 {viewMode === "grid" ? (
-                  /* Grid View with Rich Live Thumbnails */
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {files.map((file, idx) => {
-                      const Icon = getFileIconComponent(file.mimeType);
-                      return (
-                        <Card
-                          key={`grid-${file.id}-${idx}`}
-                          draggable={true}
-                          onDragStart={(e) => handleDragStartItem(e, file)}
-                          onDragEnd={handleDragEndItem}
-                          className={cn(
-                            "flex flex-col justify-between border-border card-hover group overflow-hidden shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing",
-                            draggedItem?.id === file.id && "opacity-50 border-dashed"
-                          )}
-                        >
-                          {/* Live Thumbnail / Visual Preview Banner */}
-                          <div
-                            onClick={() => setPreviewItem(file)}
-                            className="relative w-full h-36 bg-muted/50 border-b border-border flex items-center justify-center overflow-hidden cursor-pointer group/thumb"
-                          >
-                            {file.thumbnailLink ? (
-                              <img
-                                src={file.thumbnailLink}
-                                alt={file.name}
-                                referrerPolicy="no-referrer"
-                                loading="lazy"
-                                className="w-full h-full object-cover object-top transition-transform duration-300 group-hover/thumb:scale-105"
-                                onError={(e) => {
-                                  // Fallback to icon on image error
-                                  (e.target as HTMLElement).style.display = "none";
-                                }}
-                              />
-                            ) : (
-                              <div className="flex flex-col items-center justify-center space-y-1.5 text-muted-foreground">
-                                <Icon className="size-8 text-muted-foreground/70 group-hover/thumb:scale-110 group-hover/thumb:text-primary transition-all" />
-                                <span className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/60">
-                                  {file.mimeType.split("/")[1]?.split(".")[0] || "File"}
-                                </span>
-                              </div>
-                            )}
-
-                            {/* Hover Quick Preview Eye Overlay */}
-                            <div className="absolute inset-0 bg-background/40 backdrop-blur-[2px] opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                              <span className="p-2 rounded-xl bg-background/80 text-foreground shadow-sm flex items-center gap-1.5 text-xs font-semibold">
-                                <Eye className="size-3.5 text-primary" />
-                                <span>Preview</span>
-                              </span>
-                            </div>
-
-                            {/* Storage Account Badge */}
-                            <div className="absolute top-2 right-2">
-                              <Badge variant="info" className="text-[9px] font-mono bg-background/80 backdrop-blur-md shadow-sm border border-border">
-                                {file.account.email.split("@")[0]}
-                              </Badge>
-                            </div>
-                          </div>
-
-                          {/* File Details & Metadata */}
-                          <div className="p-3.5 space-y-2.5">
-                            <div className="space-y-1 min-w-0">
-                              <h4
-                                className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors cursor-pointer"
-                                title={file.name}
-                                onClick={() => setPreviewItem(file)}
-                              >
-                                {file.name}
-                              </h4>
-                              <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground">
-                                <span>{formatBytes(Number(file.size))}</span>
-                                <span>{new Date(file.updatedAt).toLocaleDateString()}</span>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center justify-between pt-2 border-t border-border">
-                              <Button
-                                asChild
-                                variant="ghost"
-                                size="sm"
-                                className="text-[11px] h-7 px-2 gap-1 text-primary hover:text-primary"
-                              >
-                                <a
-                                  href={file.webViewLink || `https://drive.google.com/file/d/${file.driveFileId}/view`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <ExternalLink className="size-3" />
-                                  <span>{t.actionOpenDrive}</span>
-                                </a>
-                              </Button>
-
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="size-7 rounded-lg text-muted-foreground hover:text-primary transition-colors"
-                                  title={t.actionDownload}
-                                  onClick={(e) => handleDownloadFile(file, e)}
-                                  disabled={downloadingId === file.id}
-                                >
-                                  {downloadingId === file.id ? (
-                                    <Loader2 className="size-3.5 animate-spin text-primary" />
-                                  ) : (
-                                    <Download className="size-3.5" />
-                                  )}
-                                </Button>
-
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="size-7 rounded-lg text-muted-foreground hover:text-foreground"
-                                      title={t.actionMore}
-                                    >
-                                      <MoreVertical className="size-3.5" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-44">
-                                    <DropdownMenuItem onClick={() => setPreviewItem(file)} className="gap-2 text-xs">
-                                      <Eye className="size-3.5 text-muted-foreground" />
-                                      <span>{t.actionPreview}</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={(e) => handleDownloadFile(file, e)} className="gap-2 text-xs font-semibold text-primary focus:text-primary">
-                                      <Download className="size-3.5 text-primary" />
-                                      <span>{t.actionDownload}</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem asChild className="gap-2 text-xs">
-                                      <a
-                                        href={file.webViewLink || `https://drive.google.com/file/d/${file.driveFileId}/view`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                      >
-                                        <ExternalLink className="size-3.5 text-muted-foreground" />
-                                        <span>{t.actionOpenDrive}</span>
-                                      </a>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={(e) => handleOpenMove(file, e)} className="gap-2 text-xs">
-                                      <FolderInput className="size-3.5 text-muted-foreground" />
-                                      <span>{t.actionMove}</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={(e) => handleOpenRename(file, e)} className="gap-2 text-xs">
-                                      <Pencil className="size-3.5 text-muted-foreground" />
-                                      <span>{t.actionRename}</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      onClick={(e) => handleOpenDelete(file, e)}
-                                      className="gap-2 text-xs text-destructive focus:text-destructive focus:bg-destructive/10"
-                                    >
-                                      <Trash2 className="size-3.5 text-destructive" />
-                                      <span>{t.actionDelete}</span>
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
-                            </div>
-                          </div>
-                        </Card>
-                      );
-                    })}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 items-stretch">
+                    {files.map((file, idx) => (
+                      <FileCard
+                        key={`grid-${file.id}-${idx}`}
+                        file={file}
+                        index={folders.length + idx}
+                        isSelected={selectedIds.has(file.id)}
+                        isBeingDragged={draggedItem?.id === file.id}
+                        downloadingId={downloadingId}
+                        onItemClick={handleItemClick}
+                        onItemDoubleClick={setPreviewItem}
+                        onPreview={setPreviewItem}
+                        onDownload={handleDownloadFile}
+                        onOpenMove={(f, e) => {
+                          e?.stopPropagation();
+                          setMoveItems([f]);
+                        }}
+                        onOpenRename={(f, e) => {
+                          e?.stopPropagation();
+                          setRenameItem(f);
+                        }}
+                        onOpenDelete={(f, e) => {
+                          e?.stopPropagation();
+                          setDeleteItem(f);
+                        }}
+                        onDragStart={handleDragStartItem}
+                        onDragEnd={handleDragEndItem}
+                        registerRef={registerItemRef}
+                      />
+                    ))}
                   </div>
                 ) : (
-                  /* List View / Table with Mini Thumbnails */
-                  <Card className="border-border overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs">
-                        <thead>
-                          <tr className="border-b border-border bg-muted/40 text-[11px] font-mono text-muted-foreground uppercase tracking-wider">
-                            <th className="py-3 px-4 font-semibold">Nama File</th>
-                            <th className="py-3 px-4 font-semibold">Storage Pool</th>
-                            <th className="py-3 px-4 font-semibold">Ukuran</th>
-                            <th className="py-3 px-4 font-semibold">Dimodifikasi</th>
-                            <th className="py-3 px-4 font-semibold text-right">Aksi</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                          {files.map((file, idx) => {
-                            const Icon = getFileIconComponent(file.mimeType);
-                            return (
-                              <tr
-                                key={`list-${file.id}-${idx}`}
-                                draggable={true}
-                                onDragStart={(e) => handleDragStartItem(e, file)}
-                                onDragEnd={handleDragEndItem}
-                                className={cn(
-                                  "hover:bg-accent/40 transition-colors cursor-grab active:cursor-grabbing",
-                                  draggedItem?.id === file.id && "opacity-50 bg-muted/40"
-                                )}
-                              >
-                                <td className="py-3 px-4">
-                                  <div
-                                    className="flex items-center gap-3 max-w-md cursor-pointer"
-                                    onClick={() => setPreviewItem(file)}
-                                  >
-                                    <div className="size-9 rounded-lg bg-muted border border-border flex items-center justify-center text-muted-foreground shrink-0 overflow-hidden">
-                                      {file.thumbnailLink ? (
-                                        <img
-                                          src={file.thumbnailLink}
-                                          alt={file.name}
-                                          referrerPolicy="no-referrer"
-                                          className="size-full object-cover object-top"
-                                        />
-                                      ) : (
-                                        <Icon className="size-4" />
-                                      )}
-                                    </div>
-                                    <span className="font-medium text-foreground truncate hover:text-primary transition-colors">
-                                      {file.name}
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="py-3 px-4">
-                                  <Badge variant="info" className="text-[10px] font-mono">
-                                    {file.account.email}
-                                  </Badge>
-                                </td>
-                                <td className="py-3 px-4 font-mono text-[11px] text-muted-foreground">
-                                  {formatBytes(Number(file.size))}
-                                </td>
-                                <td className="py-3 px-4 text-muted-foreground text-[11px]">
-                                  {new Date(file.updatedAt).toLocaleDateString()}
-                                </td>
-                                <td className="py-3 px-4 text-right">
-                                  <div className="flex items-center justify-end gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="size-7 rounded-lg text-muted-foreground hover:text-primary transition-colors"
-                                      title={t.actionDownload}
-                                      onClick={(e) => handleDownloadFile(file, e)}
-                                      disabled={downloadingId === file.id}
-                                    >
-                                      {downloadingId === file.id ? (
-                                        <Loader2 className="size-3.5 animate-spin text-primary" />
-                                      ) : (
-                                        <Download className="size-3.5" />
-                                      )}
-                                    </Button>
-
-                                    <Button asChild variant="ghost" size="icon" className="size-7" title={t.actionOpenDrive}>
-                                      <a
-                                        href={file.webViewLink || `https://drive.google.com/file/d/${file.driveFileId}/view`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                      >
-                                        <ExternalLink className="size-3.5" />
-                                      </a>
-                                    </Button>
-
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="size-7 rounded-lg text-muted-foreground hover:text-foreground"
-                                          title={t.actionMore}
-                                        >
-                                          <MoreVertical className="size-3.5" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end" className="w-44">
-                                        <DropdownMenuItem onClick={() => setPreviewItem(file)} className="gap-2 text-xs">
-                                          <Eye className="size-3.5 text-muted-foreground" />
-                                          <span>{t.actionPreview}</span>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={(e) => handleDownloadFile(file, e)} className="gap-2 text-xs font-semibold text-primary focus:text-primary">
-                                          <Download className="size-3.5 text-primary" />
-                                          <span>{t.actionDownload}</span>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem asChild className="gap-2 text-xs">
-                                          <a
-                                            href={file.webViewLink || `https://drive.google.com/file/d/${file.driveFileId}/view`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                          >
-                                            <ExternalLink className="size-3.5 text-muted-foreground" />
-                                            <span>{t.actionOpenDrive}</span>
-                                          </a>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={(e) => handleOpenMove(file, e)} className="gap-2 text-xs">
-                                          <FolderInput className="size-3.5 text-muted-foreground" />
-                                          <span>{t.actionMove}</span>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={(e) => handleOpenRename(file, e)} className="gap-2 text-xs">
-                                          <Pencil className="size-3.5 text-muted-foreground" />
-                                          <span>{t.actionRename}</span>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem
-                                          onClick={(e) => handleOpenDelete(file, e)}
-                                          className="gap-2 text-xs text-destructive focus:text-destructive focus:bg-destructive/10"
-                                        >
-                                          <Trash2 className="size-3.5 text-destructive" />
-                                          <span>{t.actionDelete}</span>
-                                        </DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  </Card>
+                  <FilesTableView
+                    files={files}
+                    foldersOffset={folders.length}
+                    selectedIds={selectedIds}
+                    draggedItemId={draggedItem?.id || null}
+                    downloadingId={downloadingId}
+                    onItemClick={handleItemClick}
+                    onItemDoubleClick={setPreviewItem}
+                    onPreview={setPreviewItem}
+                    onDownload={handleDownloadFile}
+                    onOpenMove={(f, e) => {
+                      e?.stopPropagation();
+                      setMoveItems([f]);
+                    }}
+                    onOpenRename={(f, e) => {
+                      e?.stopPropagation();
+                      setRenameItem(f);
+                    }}
+                    onOpenDelete={(f, e) => {
+                      e?.stopPropagation();
+                      setDeleteItem(f);
+                    }}
+                    onDragStart={handleDragStartItem}
+                    onDragEnd={handleDragEndItem}
+                    registerRef={registerItemRef}
+                  />
                 )}
+
+                {/* Google Drive-Style Marquee (Lasso) Selection Box */}
+                <MarqueeOverlay isActive={isMarqueeActive} rect={marqueeRect} />
 
                 {/* Lazy Loading Sentinel and Load More indicator */}
                 <div ref={loadMoreSentinelRef} className="py-6 flex items-center justify-center">
@@ -1285,7 +720,7 @@ export default function FileExplorerPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => fetchItems(page + 1, true)}
-                      className="text-xs gap-1.5 shadow-sm"
+                      className="text-xs gap-1.5 shadow-xs"
                     >
                       <span>Muat Lebih Banyak File</span>
                     </Button>
@@ -1300,508 +735,80 @@ export default function FileExplorerPage() {
           </div>
         )}
 
-        {/* Quick Preview Lightbox Modal */}
-        <Dialog open={!!previewItem} onOpenChange={(open) => !open && setPreviewItem(null)}>
-          <DialogContent className="max-w-2xl border-border bg-card p-6">
-            {previewItem && (
-              <div className="space-y-4">
-                <DialogHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-1 max-w-md">
-                      <DialogTitle className="text-sm font-bold text-foreground truncate">
-                        {previewItem.name}
-                      </DialogTitle>
-                      <DialogDescription className="text-[11px] text-muted-foreground font-mono">
-                        {formatBytes(Number(previewItem.size))} • {previewItem.account.email}
-                      </DialogDescription>
-                    </div>
-                  </div>
-                </DialogHeader>
+        {/* Floating Bulk Action Bar */}
+        <FloatingBulkBar
+          selectedItems={selectedItems}
+          totalCurrentItems={allCurrentItems.length}
+          onSelectAll={handleSelectAll}
+          onOpenBulkMove={() => setMoveItems(selectedItems)}
+          onOpenBulkDelete={() => setIsBulkDeleteOpen(true)}
+          onClearSelection={handleClearSelection}
+        />
 
-                {/* Preview Image / Viewer Container */}
-                <div className="w-full h-80 rounded-2xl bg-muted/60 border border-border flex items-center justify-center overflow-hidden p-2">
-                  {previewItem.thumbnailLink ? (
-                    <img
-                      src={previewItem.thumbnailLink.replace(/=s\d+/, "=s1200")}
-                      alt={previewItem.name}
-                      referrerPolicy="no-referrer"
-                      className="max-h-full max-w-full object-contain rounded-xl shadow-sm"
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center space-y-2 text-muted-foreground">
-                      {(() => {
-                        const Icon = getFileIconComponent(previewItem.mimeType);
-                        return <Icon className="size-16 text-primary/70" />;
-                      })()}
-                      <span className="text-xs font-mono">{previewItem.mimeType}</span>
-                    </div>
-                  )}
-                </div>
+        {/* Modals */}
+        <MoveModal
+          items={moveItems}
+          accounts={accounts}
+          onClose={() => setMoveItems([])}
+          onSuccess={() => {
+            fetchItems(1, false);
+            handleClearSelection();
+          }}
+        />
 
-                {/* Action footer */}
-                <div className="flex items-center justify-between pt-2 border-t border-border">
-                  <span className="text-[11px] text-muted-foreground">
-                    Dimodifikasi: {new Date(previewItem.updatedAt).toLocaleString()}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setPreviewItem(null)}
-                      className="text-xs"
-                    >
-                      Tutup
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => previewItem && handleDownloadFile(previewItem)}
-                      disabled={downloadingId === previewItem.id}
-                      className="gap-1.5 text-xs font-semibold shadow-xs border-border"
-                    >
-                      {downloadingId === previewItem.id ? (
-                        <Loader2 className="size-3.5 animate-spin text-primary" />
-                      ) : (
-                        <Download className="size-3.5 text-primary" />
-                      )}
-                      <span>{t.actionDownload}</span>
-                    </Button>
-                    <Button
-                      asChild
-                      size="sm"
-                      className="gap-1.5 text-xs font-semibold shadow-sm"
-                    >
-                      <a
-                        href={previewItem.webViewLink || `https://drive.google.com/file/d/${previewItem.driveFileId}/view`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <ExternalLink className="size-3.5" />
-                        <span>Buka di Google Drive</span>
-                      </a>
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+        <BulkDeleteModal
+          isOpen={isBulkDeleteOpen}
+          items={selectedItems}
+          onClose={() => setIsBulkDeleteOpen(false)}
+          onSuccess={() => {
+            fetchItems(1, false);
+            handleClearSelection();
+          }}
+        />
 
-        {/* Modal Create New Folder */}
-        <Dialog open={isNewFolderOpen} onOpenChange={setIsNewFolderOpen}>
-          <DialogContent className="max-w-md border-border bg-card p-6">
-            <DialogHeader>
-              <div className="flex items-center gap-2.5">
-                <div className="size-8 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center">
-                  <FolderPlus className="size-4" />
-                </div>
-                <div>
-                  <DialogTitle className="text-sm font-bold text-foreground">Buat Folder Baru</DialogTitle>
-                  <DialogDescription className="text-[11px] text-muted-foreground mt-0.5">
-                    Buat direktori baru di dalam pool Google Drive Anda
-                  </DialogDescription>
-                </div>
-              </div>
-            </DialogHeader>
+        <DeleteModal
+          item={deleteItem}
+          onClose={() => setDeleteItem(null)}
+          onSuccess={() => {
+            if (deleteItem?.isFolder) {
+              setFolders((prev) => prev.filter((f) => f.id !== deleteItem.id));
+            } else if (deleteItem) {
+              setFiles((prev) => prev.filter((f) => f.id !== deleteItem.id));
+            }
+            setTotalItems((prev) => Math.max(0, prev - 1));
+          }}
+        />
 
-            <form onSubmit={handleCreateFolder} className="space-y-4 pt-2">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">Nama Folder</label>
-                <Input
-                  type="text"
-                  placeholder="Contoh: Dokumen Pekerjaan"
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  required
-                  autoFocus
-                  className="text-xs"
-                />
-              </div>
+        <RenameModal
+          item={renameItem}
+          onClose={() => setRenameItem(null)}
+          onSuccess={(updatedName) => {
+            if (renameItem?.isFolder) {
+              setFolders((prev) =>
+                prev.map((f) => (f.id === renameItem.id ? { ...f, name: updatedName } : f))
+              );
+            } else if (renameItem) {
+              setFiles((prev) =>
+                prev.map((f) => (f.id === renameItem.id ? { ...f, name: updatedName } : f))
+              );
+            }
+          }}
+        />
 
-              {accounts.length > 1 && (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-foreground">Target Storage Pool</label>
-                  <select
-                    value={selectedAccountId}
-                    onChange={(e) => setSelectedAccountId(e.target.value)}
-                    className="w-full h-9 rounded-xl border border-input bg-card px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    <option value="">Auto-Route (Akun dengan sisa ruang terbanyak)</option>
-                    {accounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.email} ({formatBytes(Number(acc.availableStorage))} tersisa)
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+        <NewFolderModal
+          isOpen={isNewFolderOpen}
+          accounts={accounts}
+          defaultAccountId={selectedAccountId}
+          currentFolderId={currentFolderId}
+          onClose={() => setIsNewFolderOpen(false)}
+          onSuccess={() => fetchItems(1, false)}
+        />
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsNewFolderOpen(false)}
-                  disabled={creatingFolder}
-                  className="text-xs"
-                >
-                  Batal
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={!newFolderName.trim() || creatingFolder}
-                  className="gap-1.5 text-xs font-semibold shadow-sm"
-                >
-                  {creatingFolder ? (
-                    <>
-                      <Loader2 className="size-3.5 animate-spin" />
-                      <span>Membuat…</span>
-                    </>
-                  ) : (
-                    <>
-                      <FolderPlus className="size-3.5" />
-                      <span>Buat Folder</span>
-                    </>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Modal Rename Item */}
-        <Dialog open={!!renameItem} onOpenChange={(open) => !open && setRenameItem(null)}>
-          <DialogContent className="max-w-md border-border bg-card p-6">
-            <DialogHeader>
-              <div className="flex items-center gap-2.5">
-                <div className="size-8 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center">
-                  <Pencil className="size-4" />
-                </div>
-                <div>
-                  <DialogTitle className="text-sm font-bold text-foreground">
-                    {t.renameDialogTitle}
-                  </DialogTitle>
-                  <DialogDescription className="text-[11px] text-muted-foreground mt-0.5">
-                    {t.renameDialogDesc}
-                  </DialogDescription>
-                </div>
-              </div>
-            </DialogHeader>
-
-            <form onSubmit={handleConfirmRename} className="space-y-4 pt-2">
-              <div className="space-y-1.5">
-                <Input
-                  type="text"
-                  placeholder={t.renameInputPlaceholder}
-                  value={renameValue}
-                  onChange={(e) => setRenameValue(e.target.value)}
-                  required
-                  autoFocus
-                  className="text-xs h-9"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setRenameItem(null)}
-                  disabled={isRenaming}
-                  className="text-xs"
-                >
-                  {t.btnCancel}
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={!renameValue.trim() || isRenaming || renameValue === renameItem?.name}
-                  className="gap-1.5 text-xs font-semibold shadow-sm"
-                >
-                  {isRenaming ? (
-                    <>
-                      <Loader2 className="size-3.5 animate-spin" />
-                      <span>{t.btnSave}…</span>
-                    </>
-                  ) : (
-                    <span>{t.btnSave}</span>
-                  )}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Modal Move Item */}
-        <Dialog open={!!moveItem} onOpenChange={(open) => !open && setMoveItem(null)}>
-          <DialogContent className="max-w-lg border border-border bg-card p-6 shadow-2xl rounded-2xl">
-            <DialogHeader>
-              <div className="flex items-center gap-3">
-                <div className="size-10 rounded-2xl bg-primary/10 text-primary border border-primary/25 flex items-center justify-center shadow-inner shrink-0">
-                  <FolderInput className="size-5" />
-                </div>
-                <div>
-                  <DialogTitle className="text-base font-bold text-foreground">
-                    {t.moveDialogTitle}
-                  </DialogTitle>
-                  <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                    {t.moveDialogDesc}
-                  </DialogDescription>
-                </div>
-              </div>
-            </DialogHeader>
-
-            {moveItem && (
-              <div className="space-y-4 pt-1">
-                {/* Source Item Card */}
-                <div className="p-3.5 rounded-2xl bg-secondary/50 border border-border flex items-center justify-between gap-3 text-xs shadow-xs">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="size-9 rounded-xl bg-card border border-border/80 flex items-center justify-center shrink-0 shadow-xs">
-                      {moveItem.isFolder ? (
-                        <Folder className="size-4.5 text-primary" />
-                      ) : (
-                        <File className="size-4.5 text-sky-500" />
-                      )}
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="font-semibold text-foreground truncate">{moveItem.name}</span>
-                      <span className="text-[10px] text-muted-foreground font-mono">
-                        {moveItem.isFolder ? "Folder Direktori" : formatBytes(Number(moveItem.size || 0))}
-                      </span>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="text-[10px] font-mono shrink-0 bg-card border-border">
-                    {moveItem.account.email.split("@")[0]}
-                  </Badge>
-                </div>
-
-                {/* Destination Selection Area */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold text-foreground">
-                      Pilih Folder Tujuan
-                    </label>
-                    <span className="text-[10px] font-mono text-muted-foreground">
-                      {folders.filter((f) => f.id !== moveItem.id).length + 1} lokasi tersedia
-                    </span>
-                  </div>
-
-                  {/* Search / Filter Destinations */}
-                  {folders.filter((f) => f.id !== moveItem.id).length > 3 && (
-                    <div className="relative">
-                      <Search className="size-3.5 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
-                      <Input
-                        type="text"
-                        placeholder="Cari nama folder tujuan..."
-                        value={moveFolderQuery}
-                        onChange={(e) => setMoveFolderQuery(e.target.value)}
-                        className="pl-8 text-xs h-8 bg-card"
-                      />
-                    </div>
-                  )}
-
-                  {/* Directory Picker List */}
-                  <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
-                    {/* Root Folder Option (Drive Saya) */}
-                    {(!moveFolderQuery || "drive saya root utama".includes(moveFolderQuery.toLowerCase())) && (
-                      <button
-                        type="button"
-                        onClick={() => setMoveTargetFolderId("root")}
-                        className={cn(
-                          "w-full flex items-center justify-between p-3 rounded-xl border text-xs text-left transition-all cursor-pointer",
-                          moveTargetFolderId === "root"
-                            ? "border-primary bg-primary/10 font-semibold text-foreground shadow-sm ring-1 ring-primary/40"
-                            : "border-border bg-card hover:bg-secondary/60 text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div
-                            className={cn(
-                              "size-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
-                              moveTargetFolderId === "root"
-                                ? "bg-primary text-primary-foreground shadow-sm"
-                                : "bg-muted text-muted-foreground"
-                            )}
-                          >
-                            <HardDrive className="size-4" />
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="truncate text-foreground font-semibold">
-                              {t.moveToRoot}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground">
-                              Direktori Utama Cloud Pool
-                            </span>
-                          </div>
-                        </div>
-                        {moveTargetFolderId === "root" && (
-                          <CheckCircle2 className="size-4 text-primary shrink-0 animate-in zoom-in-50" />
-                        )}
-                      </button>
-                    )}
-
-                    {/* Subfolders Options */}
-                    {folders
-                      .filter((f) => f.id !== moveItem.id)
-                      .filter(
-                        (f) =>
-                          !moveFolderQuery ||
-                          f.name.toLowerCase().includes(moveFolderQuery.toLowerCase())
-                      )
-                      .map((folder) => {
-                        const targetId = folder.driveFileId || folder.id;
-                        const isSelected =
-                          moveTargetFolderId === targetId || moveTargetFolderId === folder.id;
-                        return (
-                          <button
-                            key={folder.id}
-                            type="button"
-                            onClick={() => setMoveTargetFolderId(targetId)}
-                            className={cn(
-                              "w-full flex items-center justify-between p-3 rounded-xl border text-xs text-left transition-all cursor-pointer",
-                              isSelected
-                                ? "border-primary bg-primary/10 font-semibold text-foreground shadow-sm ring-1 ring-primary/40"
-                                : "border-border bg-card hover:bg-secondary/60 text-muted-foreground hover:text-foreground"
-                            )}
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div
-                                className={cn(
-                                  "size-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
-                                  isSelected
-                                    ? "bg-primary text-primary-foreground shadow-sm"
-                                    : "bg-muted text-muted-foreground"
-                                )}
-                              >
-                                <Folder className="size-4" />
-                              </div>
-                              <div className="flex flex-col min-w-0">
-                                <span className="truncate text-foreground font-semibold">
-                                  {folder.name}
-                                </span>
-                                <span className="text-[10px] text-muted-foreground font-mono truncate">
-                                  {folder.account.email}
-                                </span>
-                              </div>
-                            </div>
-                            {isSelected && (
-                              <CheckCircle2 className="size-4 text-primary shrink-0 animate-in zoom-in-50" />
-                            )}
-                          </button>
-                        );
-                      })}
-                  </div>
-                </div>
-
-                {/* Footer Action Buttons */}
-                <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setMoveItem(null)}
-                    disabled={isMoving}
-                    className="text-xs"
-                  >
-                    {t.btnCancel}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => handleConfirmMove()}
-                    disabled={isMoving}
-                    className="gap-1.5 text-xs font-semibold shadow-xs"
-                  >
-                    {isMoving ? (
-                      <>
-                        <Loader2 className="size-3.5 animate-spin" />
-                        <span>{t.btnMove}…</span>
-                      </>
-                    ) : (
-                      <>
-                        <FolderInput className="size-3.5" />
-                        <span>{t.btnMove}</span>
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Modal Delete Item (Replaces alert/confirm) */}
-        <Dialog open={!!deleteItem} onOpenChange={(open) => !open && setDeleteItem(null)}>
-          <DialogContent className="max-w-md border-border bg-card p-6">
-            <DialogHeader>
-              <div className="flex items-center gap-2.5">
-                <div className="size-9 rounded-xl bg-destructive/10 text-destructive border border-destructive/20 flex items-center justify-center shrink-0">
-                  <AlertTriangle className="size-4" />
-                </div>
-                <div>
-                  <DialogTitle className="text-sm font-bold text-foreground">
-                    {t.deleteDialogTitle}
-                  </DialogTitle>
-                  <DialogDescription className="text-[11px] text-muted-foreground mt-0.5">
-                    {t.deleteDialogDesc}
-                  </DialogDescription>
-                </div>
-              </div>
-            </DialogHeader>
-
-            {deleteItem && (
-              <div className="space-y-4 pt-2">
-                <div className="p-3 rounded-xl bg-destructive/5 border border-destructive/20 flex items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-2 min-w-0">
-                    {deleteItem.isFolder ? (
-                      <Folder className="size-4 text-primary shrink-0" />
-                    ) : (
-                      <File className="size-4 text-muted-foreground shrink-0" />
-                    )}
-                    <span className="font-semibold text-foreground truncate">{deleteItem.name}</span>
-                  </div>
-                  <Badge variant="outline" className="text-[10px] font-mono shrink-0">
-                    {deleteItem.account.email.split("@")[0]}
-                  </Badge>
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDeleteItem(null)}
-                    disabled={isDeleting}
-                    className="text-xs"
-                  >
-                    {t.btnCancel}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    onClick={handleConfirmDelete}
-                    disabled={isDeleting}
-                    className="gap-1.5 text-xs font-semibold shadow-sm"
-                  >
-                    {isDeleting ? (
-                      <>
-                        <Loader2 className="size-3.5 animate-spin" />
-                        <span>{t.btnDelete}…</span>
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 className="size-3.5" />
-                        <span>{t.btnDelete}</span>
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+        <PreviewModal
+          item={previewItem}
+          onClose={() => setPreviewItem(null)}
+          onDownload={handleDownloadFile}
+        />
       </main>
     </div>
   );

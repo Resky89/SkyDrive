@@ -26,6 +26,18 @@ function safeSerialize<T>(data: T): T {
   );
 }
 
+export const listFilesSchema = z.object({
+  page: z.string().optional().default("1"),
+  limit: z.string().optional().default("24"),
+  scope: z.enum(["mydrive", "sharedWithMe"]).optional().default("mydrive"),
+  q: z.string().optional(),
+  accountId: z.string().optional(),
+  type: z.string().optional().default("all"),
+  date: z.string().optional().default("all"),
+  sort: z.string().optional().default("name_asc"),
+  folderId: z.string().optional(),
+});
+
 export const patchFileSchema = z.object({
   name: z.string().trim().min(1).optional(),
   destinationFolderId: z.string().optional(),
@@ -35,8 +47,257 @@ export const searchFilesSchema = z.object({
   q: z.string().optional(),
 });
 
+export const bulkDeleteSchema = z.object({
+  itemIds: z.array(z.string().min(1)).min(1),
+});
+
+export const bulkMoveSchema = z.object({
+  itemIds: z.array(z.string().min(1)).min(1),
+  destinationFolderId: z.string().min(1),
+});
+
 export const filesRouter = new Hono<Env>()
   .use("*", authMiddleware)
+
+  // 0. List Files and Folders (Directory Explorer)
+  .get("/", zValidator("query", listFilesSchema), async (c) => {
+    const user = c.get("user");
+    const {
+      page: rawPage,
+      limit: rawLimit,
+      scope,
+      q: query,
+      accountId,
+      type: fileType,
+      date: dateFilter,
+      sort: sortBy,
+      folderId,
+    } = c.req.valid("query");
+
+    const page = Math.max(1, parseInt(rawPage || "1", 10));
+    const limit = Math.max(1, Math.min(100, parseInt(rawLimit || "24", 10)));
+
+    // 1. Get active storage accounts
+    const accountWhere = accountId
+      ? { id: accountId, userId: user.id, isActive: true }
+      : { userId: user.id, isActive: true };
+
+    const accounts = await db.storageAccount.findMany({
+      where: accountWhere,
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        availableStorage: true,
+        usagePercentage: true,
+      },
+    });
+
+    if (accounts.length === 0) {
+      return c.json({
+        folders: [],
+        files: [],
+        allItems: [],
+        accounts: [],
+        page: 1,
+        total: 0,
+        totalPages: 0,
+        hasMore: false,
+      });
+    }
+
+    const currentParentId = folderId && folderId !== "root" ? folderId : "root";
+
+    // 2. Fetch live files directly from Google Drive for current directory and sync to DB
+    const driveResults = await Promise.allSettled(
+      accounts.map(async (acc) => {
+        try {
+          const { files: driveFiles } = await listFiles(acc.id, {
+            query,
+            folderId: folderId && folderId !== "root" ? folderId : undefined,
+            scope,
+            pageSize: 60,
+          });
+
+          // Upsert into DB in background for cache / analytics
+          for (const df of driveFiles) {
+            if (!df.id || !df.name) continue;
+            await db.file.upsert({
+              where: {
+                storageAccountId_providerFileId: {
+                  storageAccountId: acc.id,
+                  providerFileId: df.id,
+                },
+              },
+              update: {
+                name: df.name,
+                mimeType: df.mimeType,
+                size: BigInt(df.size || 0),
+                parentProviderId: currentParentId,
+                webViewLink: df.webViewLink,
+                thumbnailLink: df.thumbnailLink,
+                status: "active",
+              },
+              create: {
+                userId: user.id,
+                storageAccountId: acc.id,
+                providerFileId: df.id,
+                name: df.name,
+                mimeType: df.mimeType,
+                size: BigInt(df.size || 0),
+                parentProviderId: currentParentId,
+                webViewLink: df.webViewLink,
+                thumbnailLink: df.thumbnailLink,
+                status: "active",
+              },
+            });
+          }
+
+          return driveFiles.map((df) => ({
+            id: df.id,
+            name: df.name,
+            size: (df.size || 0).toString(),
+            mimeType: df.mimeType,
+            driveFileId: df.id,
+            parentFolderId: currentParentId,
+            isFolder: df.mimeType === "application/vnd.google-apps.folder",
+            status: "active",
+            createdAt: df.createdTime || new Date().toISOString(),
+            updatedAt: df.modifiedTime || new Date().toISOString(),
+            webViewLink: df.webViewLink,
+            thumbnailLink: df.thumbnailLink || null,
+            iconLink: (df as any).iconLink || null,
+            account: {
+              id: acc.id,
+              email: acc.email,
+              displayName: acc.displayName,
+            },
+          }));
+        } catch (err) {
+          console.warn(`Could not list files for ${acc.email} (${scope}):`, err);
+          return [];
+        }
+      })
+    );
+
+    let filteredItems = driveResults
+      .filter((r) => r.status === "fulfilled")
+      .flatMap((r) => (r as PromiseFulfilledResult<any[]>).value);
+
+    // 3. Apply Filters
+    if (fileType !== "all") {
+      if (fileType === "folders") {
+        filteredItems = filteredItems.filter((i) => i.isFolder);
+      } else if (fileType === "documents") {
+        filteredItems = filteredItems.filter(
+          (i) =>
+            !i.isFolder &&
+            (i.mimeType.includes("document") ||
+              i.mimeType.includes("word") ||
+              i.mimeType.includes("text") ||
+              i.mimeType === "application/vnd.google-apps.document")
+        );
+      } else if (fileType === "spreadsheets") {
+        filteredItems = filteredItems.filter(
+          (i) =>
+            !i.isFolder &&
+            (i.mimeType.includes("spreadsheet") ||
+              i.mimeType.includes("excel") ||
+              i.mimeType.includes("csv") ||
+              i.mimeType === "application/vnd.google-apps.spreadsheet")
+        );
+      } else if (fileType === "presentations") {
+        filteredItems = filteredItems.filter(
+          (i) =>
+            !i.isFolder &&
+            (i.mimeType.includes("presentation") ||
+              i.mimeType.includes("powerpoint") ||
+              i.mimeType === "application/vnd.google-apps.presentation")
+        );
+      } else if (fileType === "photos") {
+        filteredItems = filteredItems.filter((i) => i.mimeType.startsWith("image/"));
+      } else if (fileType === "videos") {
+        filteredItems = filteredItems.filter((i) => i.mimeType.startsWith("video/"));
+      } else if (fileType === "audio") {
+        filteredItems = filteredItems.filter((i) => i.mimeType.startsWith("audio/"));
+      } else if (fileType === "pdfs") {
+        filteredItems = filteredItems.filter((i) => i.mimeType.includes("pdf"));
+      } else if (fileType === "archives") {
+        filteredItems = filteredItems.filter(
+          (i) =>
+            i.mimeType.includes("zip") ||
+            i.mimeType.includes("tar") ||
+            i.mimeType.includes("rar") ||
+            i.mimeType.includes("7z")
+        );
+      }
+    }
+
+    // Date Filter
+    if (dateFilter !== "all") {
+      const now = new Date();
+      filteredItems = filteredItems.filter((i) => {
+        const itemDate = new Date(i.updatedAt);
+        if (dateFilter === "today") {
+          const today = new Date(now.setHours(0, 0, 0, 0));
+          return itemDate >= today;
+        } else if (dateFilter === "week") {
+          const weekAgo = new Date(now.setDate(now.getDate() - 7));
+          return itemDate >= weekAgo;
+        } else if (dateFilter === "month") {
+          const monthAgo = new Date(now.setMonth(now.getMonth() - 1));
+          return itemDate >= monthAgo;
+        } else if (dateFilter === "year") {
+          const yearStart = new Date(now.getFullYear(), 0, 1);
+          return itemDate >= yearStart;
+        }
+        return true;
+      });
+    }
+
+    // 4. Sorting (Folders always first, then requested order)
+    filteredItems.sort((a, b) => {
+      if (a.isFolder && !b.isFolder) return -1;
+      if (!a.isFolder && b.isFolder) return 1;
+
+      if (sortBy === "name_asc") return a.name.localeCompare(b.name);
+      if (sortBy === "name_desc") return b.name.localeCompare(a.name);
+      if (sortBy === "date_desc")
+        return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      if (sortBy === "date_asc")
+        return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+      if (sortBy === "size_desc") return Number(b.size) - Number(a.size);
+      if (sortBy === "size_asc") return Number(a.size) - Number(b.size);
+
+      return a.name.localeCompare(b.name);
+    });
+
+    const total = filteredItems.length;
+    const skip = (page - 1) * limit;
+    const paginatedItems = filteredItems.slice(0, skip + limit);
+
+    const folders = paginatedItems.filter((item) => item.isFolder);
+    const files = paginatedItems.filter((item) => !item.isFolder);
+
+    return c.json(
+      safeSerialize({
+        folders,
+        files,
+        allItems: paginatedItems,
+        accounts: accounts.map((a) => ({
+          id: a.id,
+          email: a.email,
+          availableStorage: a.availableStorage.toString(),
+          usagePercentage: a.usagePercentage,
+        })),
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasMore: skip + limit < total,
+      })
+    );
+  })
 
   // 1. Upload File
   .post("/upload", async (c) => {
@@ -278,7 +539,135 @@ export const filesRouter = new Hono<Env>()
     }
   )
 
-  // 3. Download File Stream
+  // 3. Bulk Delete Files / Folders
+  .post("/bulk-delete", zValidator("json", bulkDeleteSchema), async (c) => {
+    const user = c.get("user");
+    const { itemIds } = c.req.valid("json");
+
+    let deletedCount = 0;
+    const errors: string[] = [];
+
+    await Promise.allSettled(
+      itemIds.map(async (id) => {
+        try {
+          const file = await db.file.findFirst({
+            where: {
+              userId: user.id,
+              OR: [{ id }, { providerFileId: id }],
+            },
+          });
+
+          if (file) {
+            try {
+              await deleteFileFromDrive(file.storageAccountId, file.providerFileId);
+            } catch (err) {
+              console.warn("Drive delete file warning:", err);
+            }
+            await db.file.update({
+              where: { id: file.id },
+              data: { status: "deleted" },
+            });
+            deletedCount++;
+            return;
+          }
+
+          const folder = await db.folder.findFirst({
+            where: {
+              userId: user.id,
+              OR: [{ id }, { providerFolderId: id }],
+            },
+          });
+
+          if (folder) {
+            try {
+              await deleteFileFromDrive(folder.storageAccountId, folder.providerFolderId);
+            } catch (err) {
+              console.warn("Drive delete folder warning:", err);
+            }
+            await db.folder.delete({ where: { id: folder.id } });
+            deletedCount++;
+          }
+        } catch (err: any) {
+          errors.push(`Item ${id}: ${err.message}`);
+        }
+      })
+    );
+
+    return c.json({
+      success: true,
+      deletedCount,
+      totalRequested: itemIds.length,
+      errors: errors.length > 0 ? errors : undefined,
+    });
+  })
+
+  // 4. Bulk Move Files / Folders
+  .post("/bulk-move", zValidator("json", bulkMoveSchema), async (c) => {
+    const user = c.get("user");
+    const { itemIds, destinationFolderId } = c.req.valid("json");
+
+    let movedCount = 0;
+    const errors: string[] = [];
+
+    await Promise.allSettled(
+      itemIds.map(async (id) => {
+        try {
+          const file = await db.file.findFirst({
+            where: {
+              userId: user.id,
+              OR: [{ id }, { providerFileId: id }],
+            },
+          });
+
+          if (file) {
+            await moveFileInDrive(
+              file.storageAccountId,
+              file.providerFileId,
+              destinationFolderId
+            );
+            await db.file.update({
+              where: { id: file.id },
+              data: { parentProviderId: destinationFolderId },
+            });
+            movedCount++;
+            return;
+          }
+
+          const folder = await db.folder.findFirst({
+            where: {
+              userId: user.id,
+              OR: [{ id }, { providerFolderId: id }],
+            },
+          });
+
+          if (folder) {
+            await moveFileInDrive(
+              folder.storageAccountId,
+              folder.providerFolderId,
+              destinationFolderId
+            );
+            await db.folder.update({
+              where: { id: folder.id },
+              data: { parentFolderId: destinationFolderId },
+            });
+            movedCount++;
+          }
+        } catch (err: any) {
+          errors.push(`Item ${id}: ${err.message}`);
+        }
+      })
+    );
+
+    return c.json({
+      success: true,
+      movedCount,
+      totalRequested: itemIds.length,
+      destinationFolderId,
+      errors: errors.length > 0 ? errors : undefined,
+    });
+  })
+
+  // 5. Download File Stream
   .get("/:id/download", async (c) => {
     const user = c.get("user");
     const id = c.req.param("id");

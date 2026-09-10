@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
-import { LanguageProvider } from "@/lib/i18n";
+import { LanguageProvider, type Language } from "@/lib/i18n";
 
 const geistSans = Geist({ subsets: ["latin"], variable: "--font-sans" });
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
@@ -26,16 +27,27 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const cookieStore = await cookies();
+  const rawLang = cookieStore.get("skydrive_lang")?.value;
+  const initialLanguage: Language =
+    rawLang && ["en", "id", "ja", "zh", "ko"].includes(rawLang)
+      ? (rawLang as Language)
+      : "id";
+
   return (
-    <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html
+      lang={initialLanguage}
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable}`}
+    >
       <body className="antialiased">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-          <LanguageProvider>
+          <LanguageProvider initialLanguage={initialLanguage}>
             {children}
             <Toaster
               position="bottom-right"

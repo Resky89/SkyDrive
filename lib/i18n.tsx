@@ -1246,25 +1246,46 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>("id");
+export function LanguageProvider({
+  children,
+  initialLanguage = "id",
+}: {
+  children: React.ReactNode;
+  initialLanguage?: Language;
+}) {
+  const [language, setLanguageState] = useState<Language>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("skydrive_language") as Language;
+        if (saved && ["en", "id", "ja", "zh", "ko"].includes(saved)) {
+          return saved;
+        }
+      } catch {
+        // Ignore localStorage errors
+      }
+    }
+    return initialLanguage;
+  });
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem("skydrive_language") as Language;
       if (saved && ["en", "id", "ja", "zh", "ko"].includes(saved)) {
-        setLanguageState(saved);
+        if (saved !== language) {
+          setLanguageState(saved);
+        }
+        document.cookie = `skydrive_lang=${saved}; path=/; max-age=31536000; SameSite=Lax`;
       }
     } catch {
       // Ignore localStorage errors
     }
-  }, []);
+  }, [language]);
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
     try {
       localStorage.setItem("skydrive_language", lang);
-      document.cookie = `skydrive_lang=${lang}; path=/; max-age=31536000`;
+      document.cookie = `skydrive_lang=${lang}; path=/; max-age=31536000; SameSite=Lax`;
     } catch {
       // Ignore
     }

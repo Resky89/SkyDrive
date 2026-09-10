@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
-  HardDrive,
   Plus,
   RefreshCw,
   Trash2,
@@ -11,10 +10,8 @@ import {
   ShieldCheck,
   Loader2,
   Layers,
-  ArrowRight,
   Sparkles,
 } from "lucide-react";
-import { Header } from "@/components/header";
 import { formatBytes, cn, getInitials } from "@/lib/utils";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +20,6 @@ import { Progress } from "@/components/ui/progress";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useLanguage } from "@/lib/i18n";
-import { FaGoogleDrive } from "react-icons/fa6";
 
 interface StorageAccount {
   id: string;
@@ -46,7 +42,7 @@ export default function ConnectedAccountsPage() {
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
 
-  const fetchAccounts = async () => {
+  const fetchAccounts = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch("/api/storage/analytics");
@@ -59,11 +55,17 @@ export default function ConnectedAccountsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchAccounts();
-  }, []);
+  }, [fetchAccounts]);
+
+  useEffect(() => {
+    const handleRefresh = () => fetchAccounts();
+    window.addEventListener("skydrive:refresh", handleRefresh);
+    return () => window.removeEventListener("skydrive:refresh", handleRefresh);
+  }, [fetchAccounts]);
 
   const handleSyncAccount = async (id: string) => {
     setSyncingId(id);
@@ -117,8 +119,6 @@ export default function ConnectedAccountsPage() {
 
   return (
     <div className="flex-1 flex flex-col min-w-0 pb-16">
-      <Header accounts={accounts} onRefresh={fetchAccounts} />
-
       <main className="px-6 sm:px-8 py-7 max-w-6xl w-full mx-auto space-y-6">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -209,7 +209,7 @@ export default function ConnectedAccountsPage() {
             </Button>
           </SpotlightCard>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
             {accounts.map((acc) => {
               const used = Number(acc.usedStorage);
               const total = Number(acc.totalStorage);
@@ -220,7 +220,7 @@ export default function ConnectedAccountsPage() {
               return (
                 <SpotlightCard
                   key={acc.id}
-                  className="p-5 flex flex-col justify-between space-y-4 relative overflow-hidden border border-border/80 shadow-md group"
+                  className="p-5 flex flex-col justify-between h-full space-y-4 relative overflow-hidden border border-border/80 shadow-md group"
                 >
                   {isWarning && (
                     <div className="absolute top-0 right-0 left-0 h-1 bg-destructive" />
@@ -297,7 +297,7 @@ export default function ConnectedAccountsPage() {
                   )}
 
                   {/* Actions */}
-                  <div className="flex items-center justify-between pt-3 border-t border-border/70 text-xs relative z-10">
+                  <div className="flex items-center justify-between pt-3 border-t border-border/70 text-xs relative z-10 mt-auto">
                     <span className="text-[10px] font-mono text-muted-foreground">
                       Google Drive API v3
                     </span>

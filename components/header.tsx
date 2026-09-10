@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Sparkles, RefreshCw, UploadCloud } from "lucide-react";
@@ -20,17 +20,39 @@ interface HeaderProps {
   onRefresh?: () => void;
 }
 
-export function Header({ accounts = [], onRefresh }: HeaderProps) {
+export function Header({ accounts: initialAccounts, onRefresh }: HeaderProps) {
   const { data: session } = useSession();
   const { t } = useLanguage();
   const [mounted, setMounted] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [accounts, setAccounts] = useState<Array<{ id: string; email: string; availableStorage: string; usagePercentage: number }>>(
+    initialAccounts || []
+  );
+
+  const fetchAccounts = useCallback(async () => {
+    try {
+      const res = await fetch("/api/storage/analytics");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.accounts) {
+          setAccounts(json.accounts);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    if (!initialAccounts || initialAccounts.length === 0) {
+      fetchAccounts();
+    } else {
+      setAccounts(initialAccounts);
+    }
+  }, [initialAccounts, fetchAccounts]);
 
   const handleSyncAll = async () => {
     setIsSyncing(true);
@@ -39,7 +61,9 @@ export function Header({ accounts = [], onRefresh }: HeaderProps) {
       const data = await res.json();
       if (res.ok) {
         toast.success(`Synchronized ${data.count || 0} storage account quotas`);
+        await fetchAccounts();
         onRefresh?.();
+        window.dispatchEvent(new CustomEvent("skydrive:refresh"));
       } else {
         toast.error("Failed to sync account quotas");
       }
@@ -52,7 +76,7 @@ export function Header({ accounts = [], onRefresh }: HeaderProps) {
 
   return (
     <>
-      <header className="h-16 border-b border-border px-6 flex items-center justify-between bg-card sticky top-0 z-20 shadow-xs transition-colors duration-200 gap-4">
+      <header className="h-16 border-b border-border px-6 flex items-center justify-between bg-card sticky top-0 z-20 shadow-xs transition-colors duration-200 gap-4 shrink-0 w-full">
         {/* Logo (visible only on mobile where sidebar is hidden) */}
         <Link href="/dashboard" className="shrink-0 lg:hidden flex items-center gap-2">
           <Image
@@ -62,7 +86,7 @@ export function Header({ accounts = [], onRefresh }: HeaderProps) {
             height={28}
             className="h-7 w-auto object-contain"
           />
-          <span className="font-bold text-sm tracking-tight brand-text-gradient">
+          <span className="font-bold text-sm brand-text-gradient">
             SkyDrive
           </span>
         </Link>
@@ -146,7 +170,11 @@ export function Header({ accounts = [], onRefresh }: HeaderProps) {
         isOpen={isUploadOpen}
         onClose={() => setIsUploadOpen(false)}
         accounts={accounts}
-        onSuccess={() => onRefresh?.()}
+        onSuccess={() => {
+          fetchAccounts();
+          onRefresh?.();
+          window.dispatchEvent(new CustomEvent("skydrive:refresh"));
+        }}
       />
     </>
   );

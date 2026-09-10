@@ -1,20 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   BarChart2,
-  PieChart as PieIcon,
-  TrendingUp,
-  HardDrive,
-  Layers,
-  Zap,
   Loader2,
   Sparkles,
 } from "lucide-react";
-import { Header } from "@/components/header";
 import { formatBytes } from "@/lib/utils";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import {
   ResponsiveContainer,
@@ -28,13 +21,41 @@ import {
   YAxis,
 } from "recharts";
 
-const COLORS = ["#38bdf8", "#818cf8", "#34d399", "#fbbf24", "#f472b6", "#22d3ee"];
+interface StorageAccountItem {
+  id: string;
+  email: string;
+  displayName?: string | null;
+  totalStorage: string;
+  usedStorage: string;
+  availableStorage: string;
+  usagePercentage: number;
+}
+
+interface AnalyticsResponse {
+  summary?: {
+    totalAccounts: number;
+    activeAccounts: number;
+    totalFiles: number;
+    totalStorage: string;
+    usedStorage: string;
+    availableStorage: string;
+    usagePercentage: number;
+  };
+  aggregate?: {
+    totalStorage: string;
+    usedStorage: string;
+    availableStorage: string;
+  };
+  accounts: StorageAccountItem[];
+}
+
+const CHART_COLORS = ["#38bdf8", "#818cf8", "#34d399", "#fbbf24", "#f472b6", "#22d3ee"];
 
 export default function AnalyticsPage() {
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<AnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     try {
       setLoading(true);
       const res = await fetch("/api/storage/analytics");
@@ -47,30 +68,53 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchAnalytics();
-  }, []);
+  }, [fetchAnalytics]);
 
-  const accounts = data?.accounts || [];
-  const chartData = accounts.map((acc: any) => ({
-    name: acc.email.split("@")[0],
-    email: acc.email,
-    usedGB: Number((Number(acc.usedStorage) / (1024 * 1024 * 1024)).toFixed(2)),
-    availableGB: Number((Number(acc.availableStorage) / (1024 * 1024 * 1024)).toFixed(2)),
-    totalGB: Number((Number(acc.totalStorage) / (1024 * 1024 * 1024)).toFixed(2)),
-  }));
+  useEffect(() => {
+    const handleRefresh = () => fetchAnalytics();
+    window.addEventListener("skydrive:refresh", handleRefresh);
+    return () => window.removeEventListener("skydrive:refresh", handleRefresh);
+  }, [fetchAnalytics]);
 
-  const pieData = accounts.map((acc: any) => ({
-    name: acc.email.split("@")[0],
-    value: Number((Number(acc.usedStorage) / (1024 * 1024 * 1024)).toFixed(2)),
-  }));
+  const accounts = useMemo(() => data?.accounts || [], [data?.accounts]);
+
+  const chartData = useMemo(
+    () =>
+      accounts.map((acc) => ({
+        name: acc.email.split("@")[0],
+        email: acc.email,
+        usedGB: Number((Number(acc.usedStorage) / (1024 * 1024 * 1024)).toFixed(2)),
+        availableGB: Number((Number(acc.availableStorage) / (1024 * 1024 * 1024)).toFixed(2)),
+        totalGB: Number((Number(acc.totalStorage) / (1024 * 1024 * 1024)).toFixed(2)),
+      })),
+    [accounts]
+  );
+
+  const pieData = useMemo(
+    () =>
+      accounts.map((acc) => ({
+        name: acc.email.split("@")[0],
+        value: Number((Number(acc.usedStorage) / (1024 * 1024 * 1024)).toFixed(2)),
+      })),
+    [accounts]
+  );
+
+  const totalStorage = Number(
+    data?.summary?.totalStorage || data?.aggregate?.totalStorage || 0
+  );
+  const usedStorage = Number(
+    data?.summary?.usedStorage || data?.aggregate?.usedStorage || 0
+  );
+  const availableStorage = Number(
+    data?.summary?.availableStorage || data?.aggregate?.availableStorage || 0
+  );
 
   return (
     <div className="flex-1 flex flex-col min-w-0 pb-16">
-      <Header accounts={accounts} onRefresh={fetchAnalytics} />
-
       <main className="px-6 sm:px-8 py-7 max-w-6xl w-full mx-auto space-y-7">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -101,39 +145,39 @@ export default function AnalyticsPage() {
         ) : (
           <div className="space-y-6">
             {/* Top Metric Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <SpotlightCard className="p-5 space-y-1.5 shadow-md">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-stretch">
+              <SpotlightCard className="p-5 space-y-1.5 shadow-md h-full flex flex-col justify-between">
                 <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest font-semibold">
                   Total Pooled Storage
                 </span>
                 <p className="text-2xl font-extrabold font-mono text-foreground">
-                  {formatBytes(Number(data?.summary?.totalStorage || data?.aggregate?.totalStorage || 0))}
+                  {formatBytes(totalStorage)}
                 </p>
               </SpotlightCard>
 
-              <SpotlightCard className="p-5 space-y-1.5 shadow-md">
+              <SpotlightCard className="p-5 space-y-1.5 shadow-md h-full flex flex-col justify-between">
                 <span className="text-[10px] font-mono text-primary uppercase tracking-widest font-semibold">
                   Aggregate Used Space
                 </span>
                 <p className="text-2xl font-extrabold font-mono text-primary brand-text-gradient">
-                  {formatBytes(Number(data?.summary?.usedStorage || data?.aggregate?.usedStorage || 0))}
+                  {formatBytes(usedStorage)}
                 </p>
               </SpotlightCard>
 
-              <SpotlightCard className="p-5 space-y-1.5 shadow-md">
+              <SpotlightCard className="p-5 space-y-1.5 shadow-md h-full flex flex-col justify-between">
                 <span className="text-[10px] font-mono text-emerald-500 uppercase tracking-widest font-semibold">
                   Available Headroom
                 </span>
                 <p className="text-2xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400">
-                  {formatBytes(Number(data?.summary?.availableStorage || data?.aggregate?.availableStorage || 0))}
+                  {formatBytes(availableStorage)}
                 </p>
               </SpotlightCard>
             </div>
 
             {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
               {/* Usage Distribution Bar Chart */}
-              <SpotlightCard className="p-6 space-y-4 shadow-xl border border-border/80 relative">
+              <SpotlightCard className="p-6 space-y-4 shadow-xl border border-border/80 relative h-full flex flex-col justify-between">
                 <h3 className="text-xs font-bold text-foreground uppercase tracking-wider font-mono">
                   Storage Allocation Per Account (GB)
                 </h3>
@@ -157,7 +201,7 @@ export default function AnalyticsPage() {
               </SpotlightCard>
 
               {/* Pie Distribution Chart */}
-              <SpotlightCard className="p-6 space-y-4 shadow-xl border border-border/80 relative">
+              <SpotlightCard className="p-6 space-y-4 shadow-xl border border-border/80 relative h-full flex flex-col justify-between">
                 <h3 className="text-xs font-bold text-foreground uppercase tracking-wider font-mono">
                   Capacity Share Breakdown
                 </h3>
@@ -173,8 +217,8 @@ export default function AnalyticsPage() {
                         paddingAngle={4}
                         dataKey="value"
                       >
-                        {pieData.map((entry: any, index: number) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        {pieData.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip

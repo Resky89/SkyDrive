@@ -1,62 +1,108 @@
 "use client";
 
-import React, { useRef, useState, useCallback, type MouseEvent } from "react";
+import React, { useRef, useState, useCallback, forwardRef, useImperativeHandle } from "react";
 import { cn } from "@/lib/utils";
 
-interface SpotlightCardProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface SpotlightCardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   className?: string;
   spotlightColor?: string;
 }
 
-export function SpotlightCard({
-  children,
-  className = "",
-  spotlightColor = "rgba(90, 182, 231, 0.15)",
-  ...props
-}: SpotlightCardProps) {
-  const divRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [opacity, setOpacity] = useState<number>(0);
+export const SpotlightCard = forwardRef<HTMLDivElement, SpotlightCardProps>(
+  function SpotlightCard(
+    {
+      children,
+      className = "",
+      spotlightColor = "rgba(90, 182, 231, 0.22)",
+      onMouseMove,
+      onFocus,
+      onBlur,
+      onMouseEnter,
+      onMouseLeave,
+      ...props
+    },
+    ref
+  ) {
+    const divRef = useRef<HTMLDivElement>(null);
+    useImperativeHandle(ref, () => divRef.current as HTMLDivElement);
 
-  const handleMouseMove = useCallback((e: MouseEvent<HTMLDivElement>) => {
-    if (!divRef.current) return;
+    const [isFocused, setIsFocused] = useState(false);
+    const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+    const [opacity, setOpacity] = useState(0);
 
-    const div = divRef.current;
-    const rect = div.getBoundingClientRect();
+    const handleMouseMove = useCallback(
+      (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!divRef.current || isFocused) return;
 
-    setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-  }, []);
+        const rect = divRef.current.getBoundingClientRect();
+        setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+        onMouseMove?.(e);
+      },
+      [isFocused, onMouseMove]
+    );
 
-  const handleMouseEnter = useCallback(() => {
-    setOpacity(1);
-  }, []);
+    const handleFocus = useCallback(
+      (e: React.FocusEvent<HTMLDivElement>) => {
+        setIsFocused(true);
+        setOpacity(0.6);
+        onFocus?.(e);
+      },
+      [onFocus]
+    );
 
-  const handleMouseLeave = useCallback(() => {
-    setOpacity(0);
-  }, []);
+    const handleBlur = useCallback(
+      (e: React.FocusEvent<HTMLDivElement>) => {
+        setIsFocused(false);
+        setOpacity(0);
+        onBlur?.(e);
+      },
+      [onBlur]
+    );
 
-  return (
-    <div
-      ref={divRef}
-      onMouseMove={handleMouseMove}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      className={cn(
-        "relative rounded-3xl glass-panel p-6 overflow-hidden transition-all duration-300",
-        className
-      )}
-      {...props}
-    >
-      {/* Dynamic Cursor Spotlight Layer */}
+    const handleMouseEnter = useCallback(
+      (e: React.MouseEvent<HTMLDivElement>) => {
+        setOpacity(0.6);
+        onMouseEnter?.(e);
+      },
+      [onMouseEnter]
+    );
+
+    const handleMouseLeave = useCallback(
+      (e: React.MouseEvent<HTMLDivElement>) => {
+        setOpacity(0);
+        onMouseLeave?.(e);
+      },
+      [onMouseLeave]
+    );
+
+    return (
       <div
-        className="pointer-events-none absolute -inset-px transition-opacity duration-300 rounded-[inherit]"
-        style={{
-          opacity,
-          background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, ${spotlightColor}, transparent 40%)`,
-        }}
-      />
-      {children}
-    </div>
-  );
-}
+        ref={divRef}
+        onMouseMove={handleMouseMove}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className={cn(
+          "relative rounded-3xl border border-border bg-card text-card-foreground overflow-hidden",
+          className
+        )}
+        {...props}
+      >
+        {children}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 ease-in-out z-20"
+          style={{
+            opacity,
+            background: `radial-gradient(circle at ${position.x}px ${position.y}px, ${spotlightColor}, transparent 80%)`,
+          }}
+        />
+      </div>
+    );
+  }
+);
+
+SpotlightCard.displayName = "SpotlightCard";
+
+export default SpotlightCard;

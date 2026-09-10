@@ -22,7 +22,7 @@ import { BentoFeatures } from "@/components/landing/bento-features";
 import { StorageCalculator } from "@/components/landing/storage-calculator";
 import { Particles } from "@/components/ui/particles";
 import { Meteors } from "@/components/ui/meteors";
-import { Marquee } from "@/components/ui/marquee";
+import { LogoMarquee } from "@/components/ui/marquee";
 import { ShimmerButton } from "@/components/ui/shimmer-button";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { FaGoogleDrive } from "react-icons/fa6";
@@ -72,7 +72,7 @@ export function LandingView({ user }: LandingViewProps) {
             </div>
 
             {/* Center: Navigation Anchors */}
-            <nav className="hidden lg:flex items-center gap-7 text-xs font-medium text-muted-foreground">
+            <nav className="hidden lg:flex items-center gap-7 text-sm font-medium text-muted-foreground">
               <a href="#features" className="hover:text-foreground transition-colors">
                 {t.navFeatures}
               </a>
@@ -132,7 +132,7 @@ export function LandingView({ user }: LandingViewProps) {
               {/* Left Column (6 Cols): Bespoke Headline & Value Prop */}
               <div className="lg:col-span-6 space-y-7 relative z-10 text-left">
                 {/* Main Headline (Clean, no 'Google' mention) */}
-                <h1 className="text-4xl sm:text-5xl xl:text-6xl font-extrabold tracking-tight text-foreground leading-[1.08]">
+                <h1 className="text-[length:var(--text-4xl)] sm:text-[length:var(--text-5xl)] font-bold text-foreground">
                   {t.heroTitlePart1}
                   <br />
                   <span className="brand-text-gradient">{t.heroTitlePart2}</span>
@@ -175,7 +175,7 @@ export function LandingView({ user }: LandingViewProps) {
                 </div>
 
                 {/* Trust & Architecture Signals */}
-                <div className="pt-6 border-t border-border/70 flex flex-wrap items-center gap-6 text-xs font-mono text-muted-foreground">
+                <div className="pt-6 border-t border-border/70 flex flex-wrap items-center gap-6 text-xs font-medium text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="size-4 text-emerald-500" />
                     <span>{t.trustOauth}</span>
@@ -198,42 +198,21 @@ export function LandingView({ user }: LandingViewProps) {
             </div>
           </section>
 
-          {/* ── Marquee Telemetry Ticker: Placed AFTER the Hero Section ── */}
-          <div className="w-full border-y border-border/40 bg-secondary/30 backdrop-blur-md overflow-hidden relative z-10 py-1.5 my-8">
-            <Marquee pauseOnHover className="[--duration:28s] text-[11px] font-mono text-muted-foreground">
-              <span className="inline-flex items-center gap-2 mx-4">
-                <FaGoogleDrive className="size-3 text-sky-500" />
-                <span>{t.marqueeMultiAccount}</span>
-              </span>
-              <span className="text-border">✦</span>
-              <span className="inline-flex items-center gap-2 mx-4">
-                <ShieldCheck className="size-3 text-emerald-500" />
-                <span>{t.marqueeEncryption}</span>
-              </span>
-              <span className="text-border">✦</span>
-              <span className="inline-flex items-center gap-2 mx-4">
-                <Zap className="size-3 text-amber-500" />
-                <span>{t.marqueeBalancing}</span>
-              </span>
-              <span className="text-border">✦</span>
-              <span className="inline-flex items-center gap-2 mx-4">
-                <HardDrive className="size-3 text-indigo-500" />
-                <span>{t.marqueeZeroProxy}</span>
-              </span>
-              <span className="text-border">✦</span>
-            </Marquee>
+          {/* ── Multi-Cloud Provider Logo Marquee (Google Drive, Dropbox, OneDrive, AWS S3, Cloudflare R2) ── */}
+          <div className="w-full border-y border-border/40 bg-secondary/20 backdrop-blur-md overflow-hidden relative z-10 py-3 my-6">
+            <LogoMarquee />
           </div>
 
           {/* ── Section: Bento 2.0 Capabilities ── */}
           <section id="features" className="px-4 sm:px-8 max-w-7xl mx-auto space-y-10">
             <div className="text-center max-w-2xl mx-auto space-y-3">
-              <span className="text-[11px] font-mono text-primary font-bold uppercase tracking-widest">
+              <span className="text-sm font-medium text-primary">
                 {t.featuresSectionTag}
               </span>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight">
+              <h2 className="text-[length:var(--text-3xl)] sm:text-[length:var(--text-4xl)] font-bold text-foreground">
                 {t.featuresSectionTitle}
               </h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <p className="text-sm text-muted-foreground leading-[1.65] max-w-[58ch] mx-auto">
                 {t.featuresSectionDesc}
               </p>
             </div>

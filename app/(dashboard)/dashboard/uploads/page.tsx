@@ -1,23 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   UploadCloud,
-  File,
+  File as FileIcon,
   CheckCircle2,
   AlertTriangle,
   Loader2,
-  HardDrive,
-  Cpu,
-  Sparkles,
-  Layers,
   X,
 } from "lucide-react";
-import { Header } from "@/components/header";
 import { formatBytes, cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useDropzone } from "react-dropzone";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -28,21 +23,46 @@ interface StorageAccount {
   usagePercentage: number;
 }
 
+interface UploadResult {
+  name: string;
+  success: boolean;
+  accountEmail?: string;
+  error?: string;
+}
+
+const STRATEGIES = [
+  {
+    id: "LARGEST_AVAILABLE",
+    name: "Largest Free Space",
+    desc: "Directs to drive with the most bytes remaining.",
+  },
+  {
+    id: "LEAST_USED",
+    name: "Least Used %",
+    desc: "Prioritizes accounts with lowest % capacity.",
+  },
+  {
+    id: "BALANCED",
+    name: "Round-Robin Balanced",
+    desc: "Evenly distributes files across all drives.",
+  },
+  {
+    id: "MANUAL",
+    name: "Manual Destination",
+    desc: "You explicitly choose the target Google Drive.",
+  },
+];
+
 export default function SmartUploadsPage() {
   const [accounts, setAccounts] = useState<StorageAccount[]>([]);
-  const [loadingAccounts, setLoadingAccounts] = useState(true);
   const [strategy, setStrategy] = useState("LARGEST_AVAILABLE");
   const [selectedAccount, setSelectedAccount] = useState("");
   const [filesToUpload, setFilesToUpload] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [progress, setProgress] = useState<{ [key: string]: number }>({});
-  const [uploadResults, setUploadResults] = useState<
-    Array<{ name: string; success: boolean; accountEmail?: string; error?: string }>
-  >([]);
+  const [uploadResults, setUploadResults] = useState<UploadResult[]>([]);
 
-  const fetchAccounts = async () => {
+  const fetchAccounts = useCallback(async () => {
     try {
-      setLoadingAccounts(true);
       const res = await fetch("/api/storage/analytics");
       if (res.ok) {
         const data = await res.json();
@@ -53,38 +73,41 @@ export default function SmartUploadsPage() {
       }
     } catch {
       toast.error("Failed to load accounts for routing");
-    } finally {
-      setLoadingAccounts(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchAccounts();
-  }, []);
+  }, [fetchAccounts]);
 
-  const onDrop = (acceptedFiles: File[]) => {
+  useEffect(() => {
+    const handleRefresh = () => fetchAccounts();
+    window.addEventListener("skydrive:refresh", handleRefresh);
+    return () => window.removeEventListener("skydrive:refresh", handleRefresh);
+  }, [fetchAccounts]);
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
     setFilesToUpload((prev) => [...prev, ...acceptedFiles]);
-  };
+  }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple: true,
   });
 
-  const removeFile = (index: number) => {
+  const removeFile = useCallback((index: number) => {
     setFilesToUpload((prev) => prev.filter((_, i) => i !== index));
-  };
+  }, []);
 
   const handleStartUpload = async () => {
     if (filesToUpload.length === 0) return;
     setUploading(true);
     setUploadResults([]);
 
-    const results: Array<{ name: string; success: boolean; accountEmail?: string; error?: string }> = [];
+    const results: UploadResult[] = [];
 
     for (let i = 0; i < filesToUpload.length; i++) {
       const file = filesToUpload[i];
-      setProgress((prev) => ({ ...prev, [file.name]: 20 }));
 
       try {
         const formData = new FormData();
@@ -94,8 +117,6 @@ export default function SmartUploadsPage() {
           formData.append("targetAccountId", selectedAccount);
         }
 
-        setProgress((prev) => ({ ...prev, [file.name]: 60 }));
-
         const res = await fetch("/api/files/upload", {
           method: "POST",
           body: formData,
@@ -104,7 +125,6 @@ export default function SmartUploadsPage() {
         const data = await res.json();
 
         if (res.ok) {
-          setProgress((prev) => ({ ...prev, [file.name]: 100 }));
           results.push({
             name: file.name,
             success: true,
@@ -117,11 +137,12 @@ export default function SmartUploadsPage() {
             error: data.error || "Upload failed",
           });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : "Network error";
         results.push({
           name: file.name,
           success: false,
-          error: err.message || "Network error",
+          error: errMsg,
         });
       }
     }
@@ -135,8 +156,6 @@ export default function SmartUploadsPage() {
 
   return (
     <div className="flex-1 flex flex-col min-w-0 pb-16">
-      <Header accounts={accounts} onRefresh={fetchAccounts} />
-
       <main className="px-8 py-7 max-w-5xl w-full mx-auto space-y-6 animate-fade-in">
         {/* Title */}
         <div>
@@ -149,7 +168,7 @@ export default function SmartUploadsPage() {
         </div>
 
         {/* Strategy Selector Strip */}
-        <Card className="p-5 space-y-4 shadow-sm">
+        <SpotlightCard className="p-5 sm:p-6 space-y-4 shadow-sm border border-border/80">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-foreground uppercase tracking-wider font-mono">
               1. Select Routing Strategy
@@ -159,29 +178,8 @@ export default function SmartUploadsPage() {
             </Badge>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              {
-                id: "LARGEST_AVAILABLE",
-                name: "Largest Free Space",
-                desc: "Directs to drive with the most bytes remaining.",
-              },
-              {
-                id: "LEAST_USED",
-                name: "Least Used %",
-                desc: "Prioritizes accounts with lowest % capacity.",
-              },
-              {
-                id: "BALANCED",
-                name: "Round-Robin Balanced",
-                desc: "Evenly distributes files across all drives.",
-              },
-              {
-                id: "MANUAL",
-                name: "Manual Destination",
-                desc: "You explicitly choose the target Google Drive.",
-              },
-            ].map((strat) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 items-stretch">
+            {STRATEGIES.map((strat) => {
               const isSelected = strategy === strat.id;
               return (
                 <button
@@ -189,7 +187,7 @@ export default function SmartUploadsPage() {
                   type="button"
                   onClick={() => setStrategy(strat.id)}
                   className={cn(
-                    "p-3 rounded-xl border text-left flex flex-col justify-between space-y-2 transition-all cursor-pointer",
+                    "p-3 rounded-xl border text-left flex flex-col justify-between h-full space-y-2 transition-all cursor-pointer",
                     isSelected
                       ? "border-primary bg-primary/10 shadow-sm ring-1 ring-primary"
                       : "border-border bg-card hover:bg-accent"
@@ -226,10 +224,10 @@ export default function SmartUploadsPage() {
               </select>
             </div>
           )}
-        </Card>
+        </SpotlightCard>
 
         {/* Drag and Drop Zone */}
-        <Card className="p-6 space-y-4 shadow-sm">
+        <SpotlightCard className="p-6 sm:p-7 space-y-4 shadow-sm border border-border/80">
           <span className="text-xs font-bold text-foreground uppercase tracking-wider font-mono">
             2. Drop Files
           </span>
@@ -284,7 +282,7 @@ export default function SmartUploadsPage() {
                     className="p-3 flex items-center justify-between text-xs"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <File className="size-4 text-muted-foreground shrink-0" />
+                      <FileIcon className="size-4 text-muted-foreground shrink-0" />
                       <div className="flex flex-col min-w-0">
                         <span className="font-medium text-foreground truncate">
                           {file.name}
@@ -362,7 +360,7 @@ export default function SmartUploadsPage() {
               </div>
             </div>
           )}
-        </Card>
+        </SpotlightCard>
       </main>
     </div>
   );

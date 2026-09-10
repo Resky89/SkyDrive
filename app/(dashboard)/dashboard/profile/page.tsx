@@ -20,7 +20,6 @@ import {
   Sparkles,
   Save,
 } from "lucide-react";
-import { Header } from "@/components/header";
 import { useSession } from "@/lib/auth-client";
 import { formatBytes, getInitials } from "@/lib/utils";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -117,6 +116,12 @@ export default function ProfilePage() {
     fetchProfileInfo();
   }, []);
 
+  useEffect(() => {
+    const handleRefresh = () => fetchProfileInfo();
+    window.addEventListener("skydrive:refresh", handleRefresh);
+    return () => window.removeEventListener("skydrive:refresh", handleRefresh);
+  }, []);
+
   const handleUpdateIdentity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!displayName.trim()) {
@@ -209,8 +214,6 @@ export default function ProfilePage() {
 
   return (
     <div className="flex-1 flex flex-col min-w-0 pb-16">
-      <Header accounts={data?.accounts || []} onRefresh={fetchProfileInfo} />
-
       <main className="px-6 sm:px-8 py-7 max-w-5xl w-full mx-auto space-y-6 animate-fade-in">
         {/* Title */}
         <div>
@@ -271,9 +274,9 @@ export default function ProfilePage() {
         </SpotlightCard>
 
         {/* 2-Column Forms: Update Identity & Password Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           {/* Identity Update Form (7 Cols if Password enabled, or Full Width) */}
-          <SpotlightCard className={isCredential ? "lg:col-span-7 p-6 space-y-5 border border-border shadow-xs bg-card" : "lg:col-span-12 p-6 space-y-5 border border-border shadow-xs bg-card"}>
+          <SpotlightCard className={isCredential ? "lg:col-span-7 p-6 space-y-5 border border-border shadow-xs bg-card h-full flex flex-col justify-between" : "lg:col-span-12 p-6 space-y-5 border border-border shadow-xs bg-card h-full flex flex-col justify-between"}>
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2">
                 <div className="size-8 rounded-xl bg-primary/10 text-primary border border-primary/20 flex items-center justify-center">
@@ -300,56 +303,58 @@ export default function ProfilePage() {
               </div>
             )}
 
-            <form onSubmit={handleUpdateIdentity} className="space-y-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">
-                  {t.profileNameLabel}
-                </label>
-                <Input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Nama Lengkap / Tampilan"
-                  required
-                  className="text-xs h-9"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-foreground">
-                  {t.profileEmailLabel}
-                </label>
-                <Input
-                  type="email"
-                  value={currentUser?.email || ""}
-                  disabled
-                  className="text-xs h-9 opacity-70 cursor-not-allowed bg-muted/40 font-mono"
-                />
-                <span className="text-[10px] text-muted-foreground">
-                  Email akun utama terikat dengan autentikasi SkyDrive
-                </span>
-              </div>
-
-              {/* Avatar URL option for credential accounts or custom avatar */}
-              {!isGoogle && (
+            <form onSubmit={handleUpdateIdentity} className="space-y-4 flex flex-col justify-between flex-1">
+              <div className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-foreground">
-                    {t.profileAvatarLabel}
+                    {t.profileNameLabel}
                   </label>
                   <Input
-                    type="url"
-                    value={avatarUrl}
-                    onChange={(e) => setAvatarUrl(e.target.value)}
-                    placeholder="https://example.com/avatar.jpg"
-                    className="text-xs h-9 font-mono"
+                    type="text"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Nama Lengkap / Tampilan"
+                    required
+                    className="text-xs h-9"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-foreground">
+                    {t.profileEmailLabel}
+                  </label>
+                  <Input
+                    type="email"
+                    value={currentUser?.email || ""}
+                    disabled
+                    className="text-xs h-9 opacity-70 cursor-not-allowed bg-muted/40 font-mono"
                   />
                   <span className="text-[10px] text-muted-foreground">
-                    URL gambar publik untuk foto profil Anda
+                    Email akun utama terikat dengan autentikasi SkyDrive
                   </span>
                 </div>
-              )}
 
-              <div className="pt-2 flex justify-end">
+                {/* Avatar URL option for credential accounts or custom avatar */}
+                {!isGoogle && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-foreground">
+                      {t.profileAvatarLabel}
+                    </label>
+                    <Input
+                      type="url"
+                      value={avatarUrl}
+                      onChange={(e) => setAvatarUrl(e.target.value)}
+                      placeholder="https://example.com/avatar.jpg"
+                      className="text-xs h-9 font-mono"
+                    />
+                    <span className="text-[10px] text-muted-foreground">
+                      URL gambar publik untuk foto profil Anda
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-3 flex justify-end mt-auto">
                 <Button
                   type="submit"
                   size="sm"
@@ -374,7 +379,7 @@ export default function ProfilePage() {
 
           {/* Password Update Form (5 Cols) - Rendered ONLY for Credential / Non-Google Only Accounts */}
           {isCredential ? (
-            <SpotlightCard className="lg:col-span-5 p-6 space-y-5 border border-border shadow-xs bg-card">
+            <SpotlightCard className="lg:col-span-5 p-6 space-y-5 border border-border shadow-xs bg-card h-full flex flex-col justify-between">
               <div className="flex items-center justify-between pb-3 border-b border-border">
                 <div className="flex items-center gap-2">
                   <div className="size-8 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center">
@@ -391,68 +396,70 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <form onSubmit={handleUpdatePassword} className="space-y-3.5">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-foreground">
-                    {t.profileCurrentPassword}
-                  </label>
-                  <div className="relative">
+              <form onSubmit={handleUpdatePassword} className="space-y-3.5 flex flex-col justify-between flex-1">
+                <div className="space-y-3.5">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-foreground">
+                      {t.profileCurrentPassword}
+                    </label>
+                    <div className="relative">
+                      <Input
+                        type={showCurrentPassword ? "text" : "password"}
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="••••••••"
+                        required
+                        className="text-xs h-9 pr-8"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                      >
+                        {showCurrentPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-foreground">
+                      {t.profileNewPassword}
+                    </label>
+                    <div className="relative">
+                      <Input
+                        type={showNewPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Min. 8 karakter"
+                        required
+                        className="text-xs h-9 pr-8"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                      >
+                        {showNewPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-foreground">
+                      {t.profileConfirmPassword}
+                    </label>
                     <Input
-                      type={showCurrentPassword ? "text" : "password"}
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="••••••••"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Ulangi password baru"
                       required
-                      className="text-xs h-9 pr-8"
+                      className="text-xs h-9"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                    >
-                      {showCurrentPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                    </button>
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-foreground">
-                    {t.profileNewPassword}
-                  </label>
-                  <div className="relative">
-                    <Input
-                      type={showNewPassword ? "text" : "password"}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Min. 8 karakter"
-                      required
-                      className="text-xs h-9 pr-8"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
-                    >
-                      {showNewPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-foreground">
-                    {t.profileConfirmPassword}
-                  </label>
-                  <Input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Ulangi password baru"
-                    required
-                    className="text-xs h-9"
-                  />
-                </div>
-
-                <div className="pt-2 flex justify-end">
+                <div className="pt-3 flex justify-end mt-auto">
                   <Button
                     type="submit"
                     variant="default"
@@ -496,9 +503,9 @@ export default function ProfilePage() {
         </div>
 
         {/* 2-Column Details: Storage Pool + Security Enclave */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           {/* Storage Pool Snapshot (7 cols) */}
-          <SpotlightCard className="lg:col-span-7 p-6 space-y-4 border border-border shadow-md bg-card">
+          <SpotlightCard className="lg:col-span-7 p-6 space-y-4 border border-border shadow-md bg-card h-full flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <HardDrive className="size-4 text-primary" />
@@ -571,7 +578,7 @@ export default function ProfilePage() {
           </SpotlightCard>
 
           {/* Security & Enclave Status (5 cols) */}
-          <SpotlightCard className="lg:col-span-5 p-6 space-y-4 border border-border shadow-md flex flex-col justify-between bg-card">
+          <SpotlightCard className="lg:col-span-5 p-6 space-y-4 border border-border shadow-md flex flex-col justify-between bg-card h-full">
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="size-4 text-emerald-500" />
@@ -598,7 +605,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-border/60">
+            <div className="pt-4 border-t border-border/60 mt-auto">
               <Button asChild variant="outline" size="sm" className="w-full text-xs font-medium">
                 <Link href="/dashboard/accounts">Manage Enclave & Drives</Link>
               </Button>

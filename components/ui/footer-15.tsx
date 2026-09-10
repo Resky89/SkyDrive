@@ -34,20 +34,6 @@ const riseItem: Variants = {
   },
 };
 
-const linkStagger: Variants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.04 } },
-};
-
-const linkItem: Variants = {
-  hidden: { opacity: 0, y: 5 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { type: "spring", duration: 0.4, bounce: 0 },
-  },
-};
-
 const heroBrandVariant: Variants = {
   hidden: { opacity: 0, y: 40, filter: "blur(12px)" },
   visible: {
@@ -83,36 +69,31 @@ export function SkyDriveFooter({
 
   const columns = [
     {
+      id: "products",
       title: t.footerColProducts,
       links: [
-        { label: t.navDashboard, href: "/dashboard" },
-        { label: t.menuFiles, href: "/dashboard/files" },
-        { label: t.menuUploads, href: "/dashboard/uploads" },
-        { label: t.menuAnalytics, href: "/dashboard/analytics" },
-        { label: t.menuAccounts, href: "/dashboard/accounts" },
+        { id: "dashboard", label: t.navDashboard, href: "/dashboard" },
+        { id: "files", label: t.menuFiles, href: "/dashboard/files" },
+        { id: "uploads", label: t.menuUploads, href: "/dashboard/uploads" },
+        { id: "analytics", label: t.menuAnalytics, href: "/dashboard/analytics" },
+        { id: "accounts", label: t.menuAccounts, href: "/dashboard/accounts" },
       ],
     },
     {
+      id: "resources",
       title: t.footerColResources,
       links: [
-        { label: t.footerLinkHowItWorks, href: "#" },
-        { label: t.footerLinkSecurity, href: "#security" },
-        { label: t.footerLinkFeatures, href: "#features" },
-        { label: "GitHub", href: "https://github.com" },
+        { id: "how-it-works", label: t.footerLinkHowItWorks, href: "#" },
+        { id: "security", label: t.footerLinkSecurity, href: "#security" },
+        { id: "features", label: t.footerLinkFeatures, href: "#features" },
       ],
     },
     {
+      id: "legal",
       title: t.footerColLegal,
       links: [
-        { label: t.footerLinkPrivacy, href: "#" },
-        { label: t.footerLinkTerms, href: "#" },
-      ],
-    },
-    {
-      title: t.footerColSocial,
-      links: [
-        { label: "GitHub", href: "https://github.com" },
-        { label: "Twitter / X", href: "https://twitter.com" },
+        { id: "privacy", label: t.footerLinkPrivacy, href: "#" },
+        { id: "terms", label: t.footerLinkTerms, href: "#" },
       ],
     },
   ];
@@ -186,71 +167,60 @@ export function SkyDriveFooter({
                 </span>
               </motion.a>
             )}
+
+            {/* ── Seamless Copyright (Directly aligned with brand column) ── */}
+            <p className="text-xs font-mono text-muted-foreground/50 pt-3">
+              © {new Date().getFullYear()} {t.footerCopyright}
+            </p>
           </motion.div>
 
-          {/* Nav columns */}
+          {/* Nav columns with stable IDs */}
           <motion.nav
             variants={navStagger}
             aria-label="Footer navigation"
             className="grid w-full max-w-[560px] grid-cols-2 gap-y-10 sm:grid-cols-4"
           >
             {columns.map((col) => (
-              <motion.div key={col.title} variants={riseItem}>
+              <motion.div key={col.id} variants={riseItem}>
                 <h3 className="text-[10px] font-mono font-semibold uppercase tracking-[0.13em] text-muted-foreground">
                   {col.title}
                 </h3>
-                <motion.ul variants={linkStagger} className="mt-4 flex flex-col gap-3">
+                <ul className="mt-4 flex flex-col gap-3">
                   {col.links.map((link) => (
-                    <motion.li key={link.label} variants={linkItem}>
+                    <li key={link.id}>
                       <Link
                         href={link.href}
                         className="inline-block text-sm leading-none font-light text-muted-foreground/70 transition-colors duration-200 hover:text-foreground"
                       >
                         {link.label}
                       </Link>
-                    </motion.li>
+                    </li>
                   ))}
-                </motion.ul>
+                </ul>
               </motion.div>
             ))}
           </motion.nav>
         </div>
       </motion.div>
 
-      {/* ── Hero logo (large SVG) ── */}
+      {/* ── Hero brand logo (Clearly visible with bottom slightly cropped) ── */}
       <motion.div
         variants={heroBrandVariant}
         initial="hidden"
         whileInView="visible"
-        viewport={{ once: true, amount: 0.15 }}
-        className="relative flex items-end justify-center overflow-hidden px-8 pt-12 sm:pt-14 md:pt-16 pb-0"
+        viewport={{ once: true, amount: 0.1 }}
+        className="relative flex items-end justify-center overflow-hidden px-4 select-none pointer-events-none pt-6 pb-0"
       >
         <Image
           src="/SkyDrive1.svg"
           alt="SkyDrive"
-          width={900}
-          height={210}
-          className="w-full max-w-4xl h-auto select-none translate-y-[15%]"
+          width={1000}
+          height={240}
+          className="w-full max-w-5xl h-auto select-none object-contain opacity-85 dark:opacity-75 translate-y-[15%] pointer-events-none"
           aria-hidden="true"
           priority={false}
         />
       </motion.div>
-
-      {/* ── Bottom bar ── */}
-      <div className="border-t border-border/50 px-8 sm:px-12 lg:px-16 xl:px-20 py-5 mt-0">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <span className="text-[11px] font-mono text-muted-foreground/50">
-            © {new Date().getFullYear()} {t.footerCopyright}
-          </span>
-          <div className="flex items-center gap-5 text-[11px] font-mono text-muted-foreground/40">
-            <span className="inline-flex items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-emerald-500" />
-              {t.footerOperational}
-            </span>
-            <span>v1.0.0</span>
-          </div>
-        </div>
-      </div>
     </footer>
   );
 }

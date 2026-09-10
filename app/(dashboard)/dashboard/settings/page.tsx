@@ -12,7 +12,6 @@ import {
   Globe,
   Check,
 } from "lucide-react";
-import { Header } from "@/components/header";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Button } from "@/components/ui/button";
@@ -47,8 +46,6 @@ export default function SettingsPage() {
 
   return (
     <div className="flex-1 flex flex-col min-w-0 pb-16">
-      <Header />
-
       <main className="px-6 sm:px-8 py-7 max-w-4xl w-full mx-auto space-y-6 animate-fade-in">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
@@ -72,7 +69,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-2">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-2 items-stretch">
               {LANGUAGES.map((lang) => {
                 const isSelected = language === lang.code;
                 return (
@@ -84,7 +81,7 @@ export default function SettingsPage() {
                       toast.success(`Language set to ${lang.nativeName}`);
                     }}
                     className={cn(
-                      "p-3 rounded-2xl border text-left flex flex-col justify-between space-y-1.5 cursor-pointer transition-all duration-200",
+                      "p-3 rounded-2xl border text-left flex flex-col justify-between h-full space-y-1.5 cursor-pointer transition-all duration-200",
                       isSelected
                         ? "border-primary bg-primary/15 ring-2 ring-primary/40 shadow-sm"
                         : "border-border/80 bg-secondary/40 hover:bg-secondary hover:border-border"
@@ -132,7 +129,7 @@ export default function SettingsPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-stretch">
               {[
                 { id: "LARGEST_AVAILABLE", label: "Largest Free Space", desc: "Selects drive with most free bytes" },
                 { id: "LEAST_USED", label: "Least Used %", desc: "Selects drive with lowest percentage" },
@@ -142,7 +139,7 @@ export default function SettingsPage() {
                   key={s.id}
                   type="button"
                   onClick={() => setDefaultStrategy(s.id)}
-                  className={`p-3.5 rounded-2xl border text-left flex flex-col justify-between space-y-1 cursor-pointer transition-all ${
+                  className={`p-3.5 rounded-2xl border text-left flex flex-col justify-between h-full space-y-1 cursor-pointer transition-all ${
                     defaultStrategy === s.id
                       ? "border-primary bg-primary/15 ring-2 ring-primary/40 shadow-sm"
                       : "border-border/80 bg-secondary/40 hover:bg-secondary"

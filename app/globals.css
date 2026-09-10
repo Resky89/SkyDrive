@@ -134,6 +134,22 @@
   }
 }
 
+/* ── Typography Scale (fluid, clamp-based) ──────────────────── */
+:root {
+  /* Body sizes */
+  --text-xs:   clamp(0.6875rem, 0.675rem + 0.0625vw, 0.75rem);   /* 11–12px */
+  --text-sm:   clamp(0.8125rem, 0.79rem + 0.115vw, 0.875rem);    /* 13–14px */
+  --text-base: clamp(0.9375rem, 0.9rem + 0.188vw, 1rem);         /* 15–16px */
+
+  /* Heading sizes */
+  --text-lg:   clamp(1.0625rem, 1rem + 0.3vw, 1.125rem);         /* 17–18px */
+  --text-xl:   clamp(1.125rem, 1.05rem + 0.375vw, 1.25rem);      /* 18–20px */
+  --text-2xl:  clamp(1.25rem, 1.15rem + 0.5vw, 1.5rem);          /* 20–24px */
+  --text-3xl:  clamp(1.5rem, 1.3rem + 1vw, 2rem);                /* 24–32px */
+  --text-4xl:  clamp(1.75rem, 1.45rem + 1.5vw, 2.5rem);          /* 28–40px */
+  --text-5xl:  clamp(2.25rem, 1.7rem + 2.75vw, 3.5rem);          /* 36–56px */
+}
+
 * {
   box-sizing: border-box;
 }
@@ -142,6 +158,8 @@ html, body {
   min-height: 100dvh;
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
+  font-size: var(--text-base);
+  line-height: 1.6;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -237,7 +255,7 @@ html.lenis, html.lenis body {
     opacity: 1;
   }
   100% {
-    transform: rotate(215deg) translateX(-600px);
+    transform: rotate(215deg) translateX(900px);
     opacity: 0;
   }
 }
@@ -364,7 +382,8 @@ html.lenis, html.lenis body {
   box-shadow: 0 16px 36px -10px hsl(var(--primary) / 0.12), 0 4px 12px -4px hsl(var(--primary) / 0.08);
 }
 .dark .card-hover:hover {
-  box-shadow: 0 20px 45px -12px rgba(0, 0, 0, 0.7), 0 0 0 1px hsl(var(--primary) / 0.35);
+  border-color: hsl(var(--primary) / 0.5);
+  box-shadow: 0 20px 45px -12px rgba(0, 0, 0, 0.7);
 }
 
 /* ── Custom Subtle Scrollbar ────────────────────────────────── */
@@ -378,6 +397,36 @@ html.lenis, html.lenis body {
   background: hsl(var(--primary) / 0.5);
 }
 
+/* ── Typography Utilities ───────────────────────────────────── */
+.text-balance {
+  text-wrap: balance;
+}
+
+/* Headings: more space above than below, tight but not cramped */
+h1, h2, h3, h4 {
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+  margin-block: 0;
+}
+
+h1 { letter-spacing: -0.025em; }
+h2 { letter-spacing: -0.02em; }
+h3 { letter-spacing: -0.015em; line-height: 1.2; }
+
+/* Section eyebrow labels — human, not template */
+.eyebrow {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Dashboard data labels — OK untuk monospace karena ini data */
+.data-label {
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Landing Page Entrance Animations ───────────────────────── */
 @keyframes fadeSlideUp {
   from {
@@ -388,4 +437,47 @@ html.lenis, html.lenis body {
     opacity: 1;
     transform: translateY(0);
   }
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+/* MagicUI AnimatedThemeToggler — View Transition clip-path reveal */
+html[data-magicui-theme-vt="active"]::view-transition-group(root) {
+  animation-duration: var(--magicui-theme-toggle-vt-duration, 450ms);
+}
+
+html[data-magicui-theme-vt="active"]::view-transition-new(root) {
+  clip-path: var(--magicui-theme-vt-clip-from);
+  animation: none;
+}
+
+/* Instant theme transition: remove all CSS transition delays while theme toggle is active */
+html[data-magicui-theme-vt="active"] *,
+html[data-magicui-theme-vt="active"] *::before,
+html[data-magicui-theme-vt="active"] *::after {
+  transition: none !important;
+}
+
+/* ── Card Entrance Animation ────────────────────────────────── */
+@keyframes card-entrance {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-card-in {
+  animation: card-entrance 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Scrollbar Stability Utilities ──────────────────────────── */
+.scrollbar-stable {
+  scrollbar-gutter: stable;
 }

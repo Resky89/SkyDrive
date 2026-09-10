@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, memo } from "react";
 import { useDropzone } from "react-dropzone";
 import {
   UploadCloud,
   CheckCircle2,
-  AlertCircle,
   Loader2,
   HardDrive,
   Cpu,
   Layers,
   Sparkles,
+  LucideIcon,
 } from "lucide-react";
 import { formatBytes, cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -22,25 +22,45 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+
+interface StorageAccountSummary {
+  id: string;
+  email: string;
+  availableStorage: string;
+  usagePercentage: number;
+}
 
 interface QuickUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
-  accounts?: Array<{ id: string; email: string; availableStorage: string; usagePercentage: number }>;
+  accounts?: StorageAccountSummary[];
   onSuccess?: () => void;
 }
 
-export function QuickUploadModal({
+type StrategyType = "LARGEST_AVAILABLE" | "LEAST_USED" | "BALANCED" | "MANUAL";
+
+interface StrategyOption {
+  id: StrategyType;
+  label: string;
+  desc: string;
+  icon: LucideIcon;
+}
+
+const STRATEGY_OPTIONS: StrategyOption[] = [
+  { id: "LARGEST_AVAILABLE", label: "Largest Free", desc: "Drive with most space", icon: Sparkles },
+  { id: "LEAST_USED", label: "Least Used %", desc: "Lowest % capacity", icon: HardDrive },
+  { id: "BALANCED", label: "Balanced", desc: "Equalizes space", icon: Layers },
+  { id: "MANUAL", label: "Manual", desc: "Choose drive", icon: HardDrive },
+];
+
+export const QuickUploadModal = memo(function QuickUploadModal({
   isOpen,
   onClose,
   accounts = [],
   onSuccess,
 }: QuickUploadModalProps) {
   const [file, setFile] = useState<File | null>(null);
-  const [strategy, setStrategy] = useState<"MANUAL" | "LARGEST_AVAILABLE" | "LEAST_USED" | "BALANCED">(
-    "LARGEST_AVAILABLE"
-  );
+  const [strategy, setStrategy] = useState<StrategyType>("LARGEST_AVAILABLE");
   const [selectedAccountId, setSelectedAccountId] = useState<string>(
     accounts[0]?.id || ""
   );
@@ -92,8 +112,9 @@ export function QuickUploadModal({
       setFile(null);
       onSuccess?.();
       onClose();
-    } catch (err: any) {
-      toast.error(err.message || "Upload failed");
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : "Upload failed";
+      toast.error(errorMsg);
     } finally {
       setUploading(false);
       setProgress(0);
@@ -102,7 +123,7 @@ export function QuickUploadModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && !uploading && onClose()}>
-      <DialogContent className="max-w-lg border-border bg-card p-6">
+      <DialogContent className="max-w-lg border-border bg-card p-6 rounded-2xl shadow-2xl">
         <DialogHeader className="border-b border-border pb-4">
           <div className="flex items-center gap-2.5">
             <div className="size-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
@@ -163,19 +184,14 @@ export function QuickUploadModal({
             Routing Strategy
           </label>
           <div className="grid grid-cols-2 gap-2">
-            {[
-              { id: "LARGEST_AVAILABLE", label: "Largest Free", desc: "Drive with most space", icon: Sparkles },
-              { id: "LEAST_USED", label: "Least Used %", desc: "Lowest % capacity", icon: HardDrive },
-              { id: "BALANCED", label: "Balanced", desc: "Equalizes space", icon: Layers },
-              { id: "MANUAL", label: "Manual", desc: "Choose drive", icon: HardDrive },
-            ].map((s) => {
+            {STRATEGY_OPTIONS.map((s) => {
               const Icon = s.icon;
               const isSelected = strategy === s.id;
               return (
                 <button
                   key={s.id}
                   type="button"
-                  onClick={() => setStrategy(s.id as any)}
+                  onClick={() => setStrategy(s.id)}
                   className={cn(
                     "p-2.5 rounded-xl border text-left flex flex-col gap-0.5 transition-all text-xs cursor-pointer",
                     isSelected
@@ -193,6 +209,24 @@ export function QuickUploadModal({
             })}
           </div>
         </div>
+
+        {/* Target Account Selector for Manual Strategy */}
+        {strategy === "MANUAL" && accounts.length > 0 && (
+          <div className="space-y-1.5 animate-in fade-in zoom-in-95 duration-200">
+            <label className="text-xs font-semibold text-foreground">Select Target Drive</label>
+            <select
+              value={selectedAccountId}
+              onChange={(e) => setSelectedAccountId(e.target.value)}
+              className="w-full h-9 rounded-xl border border-input bg-card px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer"
+            >
+              {accounts.map((acc) => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.email} ({formatBytes(Number(acc.availableStorage))} available)
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Submit Actions */}
         <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-border">
@@ -227,4 +261,4 @@ export function QuickUploadModal({
       </DialogContent>
     </Dialog>
   );
-}
+});

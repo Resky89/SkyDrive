@@ -23,13 +23,13 @@ export function Meteors({ number = 20, className }: MeteorsProps) {
   }, [number]);
 
   return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden z-[1]" aria-hidden="true">
+    <div className="pointer-events-none absolute inset-0 overflow-hidden -z-10" aria-hidden="true">
       {meteorStyles.map((style, idx) => (
         <span
           key={idx}
           className={cn(
-            "animate-meteor pointer-events-none absolute size-1 rotate-[215deg] rounded-full bg-sky-300 shadow-[0_0_8px_1px_#5ab6e7]",
-            "before:absolute before:top-1/2 before:h-[1px] before:w-[65px] before:-translate-y-[50%] before:bg-gradient-to-r before:from-sky-400 before:via-sky-300 before:to-transparent before:content-['']",
+            "animate-meteor pointer-events-none absolute size-1 rounded-full bg-sky-300 shadow-[0_0_8px_2px_#5ab6e7]",
+            "before:absolute before:top-1/2 before:right-full before:h-[1px] before:w-[80px] before:-translate-y-1/2 before:bg-gradient-to-r before:from-transparent before:via-sky-400 before:to-sky-300 before:content-['']",
             className
           )}
           style={style}
