@@ -6,9 +6,10 @@ import {
   ArrowRight,
   HardDrive,
   ShieldCheck,
-  Zap,
   Lock,
   ChevronRight,
+  Zap,
+  Sparkles,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -17,15 +18,12 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
 import { SkyDriveFooter } from "@/components/ui/footer-15";
 import { SmoothScrollProvider } from "@/components/smooth-scroll-provider";
+import { DashboardHero3D } from "@/components/landing/dashboard-hero-3d";
 import { VirtualCloudCore } from "@/components/landing/virtual-cloud-core";
 import { BentoFeatures } from "@/components/landing/bento-features";
 import { StorageCalculator } from "@/components/landing/storage-calculator";
-import { Particles } from "@/components/ui/particles";
-import { Meteors } from "@/components/ui/meteors";
 import { LogoMarquee } from "@/components/ui/marquee";
-import { ShimmerButton } from "@/components/ui/shimmer-button";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
-import { FaGoogleDrive } from "react-icons/fa6";
 import { useLanguage } from "@/lib/i18n";
 
 interface LandingViewProps {
@@ -43,23 +41,21 @@ export function LandingView({ user }: LandingViewProps) {
   return (
     <SmoothScrollProvider>
       <div className="min-h-[100dvh] bg-background text-foreground flex flex-col font-sans selection:bg-primary/20 selection:text-primary relative overflow-x-clip">
-        {/* Magic UI Interactive Stardust Particles Canvas */}
-        <Particles quantity={45} ease={60} size={0.6} staticity={40} className="z-0" />
+        {/* ── Subtle Engineering Dot Grid (Clean, non-AI-slop backdrop) ── */}
+        <div className="absolute inset-0 bg-[radial-gradient(hsl(var(--muted-foreground)/0.18)_1px,transparent_1px)] [background-size:24px_24px] [mask-image:radial-gradient(ellipse_65%_45%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none -z-10" />
 
-        {/* Magic UI Meteors (Celestial Streaks Across The Sky) */}
-        <Meteors number={16} className="opacity-80" />
+        {/* ── Refined Atmospheric Horizon Glow ── */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[350px] bg-gradient-to-b from-primary/15 via-sky-500/10 to-transparent blur-3xl rounded-full pointer-events-none -z-10" />
 
-        {/* Ambient Atmospheric Cloud Glows */}
-        <div className="ambient-sky-orb top-[-100px] left-1/2 -translate-x-1/2 w-[850px] h-[450px] bg-gradient-to-b from-sky-500/20 via-blue-600/10 to-transparent pointer-events-none" />
-        <div className="ambient-sky-orb top-[800px] right-[-100px] w-[550px] h-[550px] bg-sky-400/15 pointer-events-none" />
-        <div className="ambient-sky-orb top-[1700px] left-[-150px] w-[650px] h-[650px] bg-indigo-600/15 pointer-events-none" />
-
-        {/* ── Fixed Floating Glass AppBar (Without Badge) ── */}
+        {/* ── Fixed Floating Glass AppBar ── */}
         <header className="sticky top-0 z-40 w-full px-4 sm:px-8 py-3.5 transition-all">
           <div className="max-w-7xl mx-auto rounded-2xl glass-pill px-5 sm:px-6 h-14 flex items-center justify-between border border-border/80 shadow-lg shadow-black/[0.03]">
-            {/* Left: Official SkyDrive1 Logo */}
+            {/* Left: Official SkyDrive Logo */}
             <div className="flex items-center gap-3">
-              <Link href="/" className="flex items-center gap-2 group transition-transform active:scale-95">
+              <Link
+                href="/"
+                className="flex items-center gap-2 group transition-transform active:scale-95"
+              >
                 <Image
                   src="/SkyDrive1.svg"
                   alt="SkyDrive"
@@ -73,13 +69,34 @@ export function LandingView({ user }: LandingViewProps) {
 
             {/* Center: Navigation Anchors */}
             <nav className="hidden lg:flex items-center gap-7 text-sm font-medium text-muted-foreground">
-              <a href="#features" className="hover:text-foreground transition-colors">
+              <a
+                href="#preview"
+                className="hover:text-foreground transition-colors"
+              >
+                Dashboard
+              </a>
+              <a
+                href="#features"
+                className="hover:text-foreground transition-colors"
+              >
                 {t.navFeatures}
               </a>
-              <a href="#calculator" className="hover:text-foreground transition-colors">
+              <a
+                href="#routing"
+                className="hover:text-foreground transition-colors"
+              >
+                Smart Engine
+              </a>
+              <a
+                href="#calculator"
+                className="hover:text-foreground transition-colors"
+              >
                 {t.navCalculator}
               </a>
-              <a href="#security" className="hover:text-foreground transition-colors">
+              <a
+                href="#security"
+                className="hover:text-foreground transition-colors"
+              >
                 {t.navSecurity}
               </a>
             </nav>
@@ -92,7 +109,7 @@ export function LandingView({ user }: LandingViewProps) {
               {user ? (
                 <Link
                   href="/dashboard"
-                  className="flex items-center gap-2 pl-2 pr-3.5 py-1 rounded-full bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-all group cursor-pointer shadow-sm ml-1"
+                  className="flex items-center gap-2 pl-2 pr-3.5 py-1 rounded-full bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-all group cursor-pointer shadow-xs ml-1"
                 >
                   <Avatar className="size-6 border border-primary/30">
                     {user.image && (
@@ -113,10 +130,19 @@ export function LandingView({ user }: LandingViewProps) {
                 </Link>
               ) : (
                 <div className="flex items-center gap-2 ml-1">
-                  <Button asChild variant="ghost" size="sm" className="text-xs h-8.5 font-medium">
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-8.5 font-medium"
+                  >
                     <Link href="/login">{t.navLogin}</Link>
                   </Button>
-                  <Button asChild size="sm" className="text-xs h-8.5 font-semibold px-4 shadow-sm">
+                  <Button
+                    asChild
+                    size="sm"
+                    className="text-xs h-8.5 font-semibold px-4 shadow-xs"
+                  >
                     <Link href="/register">{t.navRegister}</Link>
                   </Button>
                 </div>
@@ -125,94 +151,140 @@ export function LandingView({ user }: LandingViewProps) {
           </div>
         </header>
 
-        <main className="flex-1 space-y-20 sm:space-y-24 relative z-10">
-          {/* ── Hero Section (Without Badge, Pure Headline & Drive wording) ── */}
-          <section className="relative px-4 sm:px-8 pt-8 sm:pt-14 pb-4 max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-              {/* Left Column (6 Cols): Bespoke Headline & Value Prop */}
-              <div className="lg:col-span-6 space-y-7 relative z-10 text-left">
-                {/* Main Headline (Clean, no 'Google' mention) */}
-                <h1 className="text-[length:var(--text-4xl)] sm:text-[length:var(--text-5xl)] font-bold text-foreground">
-                  {t.heroTitlePart1}
-                  <br />
-                  <span className="brand-text-gradient">{t.heroTitlePart2}</span>
-                  <br />
-                  {t.heroTitlePart3}
-                </h1>
-
-                {/* Subtitle */}
-                <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-[48ch]">
-                  {t.heroSubtitle}
-                </p>
-
-                {/* Primary Action Buttons with Magic UI Shimmer */}
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
-                  {user ? (
-                    <>
-                      <Button asChild size="lg" className="h-12 px-7 text-sm font-semibold gap-2 shadow-md">
-                        <Link href="/dashboard">
-                          {t.heroCtaDashboard}
-                          <ArrowRight className="size-4" />
-                        </Link>
-                      </Button>
-                      <Button asChild variant="outline" size="lg" className="h-12 px-6 text-sm font-medium">
-                        <Link href="/dashboard/accounts">{t.heroCtaManage}</Link>
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Link href="/register" className="inline-block">
-                        <ShimmerButton className="h-12 px-8 text-sm font-semibold gap-2">
-                          <span>{t.heroCtaPrimary}</span>
-                          <ArrowRight className="size-4" />
-                        </ShimmerButton>
-                      </Link>
-                      <Button asChild variant="outline" size="lg" className="h-12 px-6 text-sm font-medium">
-                        <Link href="/login">{t.heroCtaSecondary}</Link>
-                      </Button>
-                    </>
-                  )}
-                </div>
-
-                {/* Trust & Architecture Signals */}
-                <div className="pt-6 border-t border-border/70 flex flex-wrap items-center gap-6 text-xs font-medium text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <ShieldCheck className="size-4 text-emerald-500" />
-                    <span>{t.trustOauth}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <HardDrive className="size-4 text-sky-500" />
-                    <span>{t.trustUnlimited}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Lock className="size-4 text-indigo-500" />
-                    <span>{t.trustVault}</span>
-                  </div>
-                </div>
+        <main className="flex-1 space-y-20 sm:space-y-28 relative z-10">
+          {/* ── Hero Section (Senior Developer / Linear & Vercel Aesthetic) ── */}
+          <section className="relative px-4 sm:px-8 pt-10 sm:pt-16 pb-6 max-w-7xl mx-auto text-center">
+            {/* Engineering Status Pill */}
+            <div className="flex justify-center mb-6">
+              <div className="inline-flex items-center gap-2.5 px-3.5 py-1 rounded-full border border-border/80 bg-card/70 backdrop-blur-md text-xs font-mono text-muted-foreground shadow-2xs">
+                <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="font-semibold text-foreground">SkyDrive</span>
+                <span className="text-border">|</span>
+                <span>Unified Multi-Cloud Storage Engine</span>
               </div>
+            </div>
 
-              {/* Right Column (6 Cols): Clean Multi-Drive Core Stage */}
-              <div className="lg:col-span-6 relative z-10">
-                <VirtualCloudCore />
+            {/* High-Impact Master Headline */}
+            <div className="max-w-4xl mx-auto space-y-4">
+              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-foreground leading-[1.08]">
+                {t.heroTitlePart1}{" "}
+                <span className="brand-text-gradient">{t.heroTitlePart2}</span>{" "}
+                {t.heroTitlePart3}
+              </h1>
+
+              {/* Precise Subtitle */}
+              <p className="text-base sm:text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto pt-2">
+                {t.heroSubtitle}
+              </p>
+            </div>
+
+            {/* Action CTAs */}
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5">
+              {user ? (
+                <>
+                  <Button
+                    asChild
+                    size="lg"
+                    className="h-12 px-8 text-sm font-semibold gap-2 shadow-md"
+                  >
+                    <Link href="/dashboard">
+                      {t.heroCtaDashboard}
+                      <ArrowRight className="size-4" />
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="lg"
+                    className="h-12 px-6 text-sm font-medium border-border/80"
+                  >
+                    <Link href="/dashboard/accounts">{t.heroCtaManage}</Link>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    asChild
+                    size="lg"
+                    className="h-12 px-8 text-sm font-semibold gap-2 shadow-md bg-foreground text-background hover:bg-foreground/90 transition-all"
+                  >
+                    <Link href="/register">
+                      {t.heroCtaPrimary}
+                      <ArrowRight className="size-4" />
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="lg"
+                    className="h-12 px-6 text-sm font-medium border-border/80 bg-card/50 hover:bg-accent transition-colors"
+                  >
+                    <Link href="/login">{t.heroCtaSecondary}</Link>
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {/* Architectural Trust Signals */}
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-6 sm:gap-8 text-xs font-mono text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="size-4 text-emerald-500" />
+                <span>{t.trustOauth}</span>
               </div>
+              <div className="flex items-center gap-2">
+                <HardDrive className="size-4 text-sky-500" />
+                <span>{t.trustUnlimited}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Lock className="size-4 text-indigo-500" />
+                <span>{t.trustVault}</span>
+              </div>
+            </div>
+
+            {/* ── 3D Perspective Dashboard Showcase (Dark & Light Adaptive) ── */}
+            <div id="preview" className="mt-12 sm:mt-16">
+              <DashboardHero3D
+                lightImageSrc="/dashboard-light.webp"
+                darkImageSrc="/dashboard-dark.webp"
+              />
             </div>
           </section>
 
-          {/* ── Multi-Cloud Provider Logo Marquee (Google Drive, Dropbox, OneDrive, AWS S3, Cloudflare R2) ── */}
-          <div className="w-full border-y border-border/40 bg-secondary/20 backdrop-blur-md overflow-hidden relative z-10 py-3 my-6">
+          {/* ── Multi-Cloud Provider Logo Marquee ── */}
+          <div className="w-full border-y border-border/40 bg-secondary/15 backdrop-blur-md overflow-hidden relative z-10 py-3.5">
             <LogoMarquee />
           </div>
 
+          {/* ── Section: Interactive Smart Routing Engine Sandbox ── */}
+          <section id="routing" className="px-4 sm:px-8 max-w-7xl mx-auto">
+            <div className="text-center max-w-2xl mx-auto space-y-3 mb-10">
+              <span className="text-xs font-mono uppercase tracking-wider text-primary font-semibold">
+                Autonomous Traffic Dispatch
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
+                {t.vccSimTitle}
+              </h2>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {t.vccSimDesc}
+              </p>
+            </div>
+
+            <VirtualCloudCore />
+          </section>
+
           {/* ── Section: Bento 2.0 Capabilities ── */}
-          <section id="features" className="px-4 sm:px-8 max-w-7xl mx-auto space-y-10">
+          <section
+            id="features"
+            className="px-4 sm:px-8 max-w-7xl mx-auto space-y-10"
+          >
             <div className="text-center max-w-2xl mx-auto space-y-3">
-              <span className="text-sm font-medium text-primary">
+              <span className="text-xs font-mono uppercase tracking-wider text-primary font-semibold">
                 {t.featuresSectionTag}
               </span>
-              <h2 className="text-[length:var(--text-3xl)] sm:text-[length:var(--text-4xl)] font-bold text-foreground">
+              <h2 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
                 {t.featuresSectionTitle}
               </h2>
-              <p className="text-sm text-muted-foreground leading-[1.65] max-w-[58ch] mx-auto">
+              <p className="text-sm text-muted-foreground leading-relaxed max-w-[58ch] mx-auto">
                 {t.featuresSectionDesc}
               </p>
             </div>
@@ -244,16 +316,19 @@ export function LandingView({ user }: LandingViewProps) {
                 </div>
 
                 <div className="flex flex-wrap gap-2.5 shrink-0">
-                  {["AES-256-GCM", "OAuth 2.0 PKCE", "No File Caching", "Direct API Pipe"].map(
-                    (tag) => (
-                      <span
-                        key={tag}
-                        className="text-[11px] font-mono px-3 py-1 rounded-xl bg-secondary/80 border border-border/80 text-foreground font-medium"
-                      >
-                        {tag}
-                      </span>
-                    )
-                  )}
+                  {[
+                    "AES-256-GCM",
+                    "OAuth 2.0 PKCE",
+                    "No File Caching",
+                    "Direct API Pipe",
+                  ].map((tag) => (
+                    <span
+                      key={tag}
+                      className="text-[11px] font-mono px-3 py-1 rounded-xl bg-secondary/80 border border-border/80 text-foreground font-medium"
+                    >
+                      {tag}
+                    </span>
+                  ))}
                 </div>
               </div>
             </SpotlightCard>
