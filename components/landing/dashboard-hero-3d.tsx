@@ -108,9 +108,9 @@ export const DashboardHero3D: React.FC<DashboardHero3DProps> = ({
           </div>
 
           {/* ── Dual Theme Image Viewport (Lossless Crisp Rendering) ── */}
-          <div className="relative w-full aspect-[16/9] bg-muted overflow-hidden [transform:translateZ(0)]">
+          <div className="relative w-full aspect-[16/9] bg-[#F8FAFC] dark:bg-[#080D19] overflow-hidden [transform:translateZ(0)]">
             {/* Light Mode Screenshot */}
-            <div className="relative w-full h-full block dark:hidden">
+            <div className="relative w-full h-full block dark:hidden bg-[#F8FAFC]">
               <Image
                 src={lightImageSrc}
                 alt="SkyDrive Unified Storage Dashboard (Light Mode)"
@@ -124,7 +124,7 @@ export const DashboardHero3D: React.FC<DashboardHero3DProps> = ({
             </div>
 
             {/* Dark Mode Screenshot */}
-            <div className="relative w-full h-full hidden dark:block">
+            <div className="relative w-full h-full hidden dark:block bg-[#080D19]">
               <Image
                 src={darkImageSrc}
                 alt="SkyDrive Unified Storage Dashboard (Dark Mode)"

@@ -154,16 +154,6 @@ export function LandingView({ user }: LandingViewProps) {
         <main className="flex-1 space-y-20 sm:space-y-28 relative z-10">
           {/* ── Hero Section (Senior Developer / Linear & Vercel Aesthetic) ── */}
           <section className="relative px-4 sm:px-8 pt-10 sm:pt-16 pb-6 max-w-7xl mx-auto text-center">
-            {/* Engineering Status Pill */}
-            <div className="flex justify-center mb-6">
-              <div className="inline-flex items-center gap-2.5 px-3.5 py-1 rounded-full border border-border/80 bg-card/70 backdrop-blur-md text-xs font-mono text-muted-foreground shadow-2xs">
-                <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="font-semibold text-foreground">SkyDrive</span>
-                <span className="text-border">|</span>
-                <span>Unified Multi-Cloud Storage Engine</span>
-              </div>
-            </div>
-
             {/* High-Impact Master Headline */}
             <div className="max-w-4xl mx-auto space-y-4">
               <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-foreground leading-[1.08]">
