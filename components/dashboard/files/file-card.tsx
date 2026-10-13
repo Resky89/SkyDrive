@@ -33,7 +33,8 @@ interface FileCardProps {
   isBeingDragged: boolean;
   downloadingId: string | null;
   onItemClick: (file: CloudItem, index: number, e: React.MouseEvent) => void;
-  onItemDoubleClick: (file: CloudItem, e: React.MouseEvent) => void;
+  onItemDoubleClick?: (file: CloudItem, e: React.MouseEvent) => void;
+  onItemPointerDown?: (file: CloudItem, e: React.PointerEvent) => void;
   onPreview: (file: CloudItem) => void;
   onDownload: (file: CloudItem, e?: React.MouseEvent) => void;
   onOpenMove: (file: CloudItem, e?: React.MouseEvent) => void;
@@ -52,6 +53,7 @@ export const FileCard = memo(function FileCard({
   downloadingId,
   onItemClick,
   onItemDoubleClick,
+  onItemPointerDown,
   onPreview,
   onDownload,
   onOpenMove,
@@ -70,8 +72,9 @@ export const FileCard = memo(function FileCard({
       draggable={isSelected}
       onDragStart={(e) => isSelected && onDragStart(e, file)}
       onDragEnd={onDragEnd}
+      onPointerDown={(e) => onItemPointerDown?.(file, e)}
       onClick={(e) => onItemClick(file, index, e)}
-      onDoubleClick={(e) => onItemDoubleClick(file, e)}
+      onDoubleClick={(e) => onItemDoubleClick?.(file, e)}
       className={cn(
         "flex flex-col justify-between border card-hover group overflow-hidden shadow-xs hover:shadow-md transition-all cursor-pointer h-full rounded-2xl select-none relative",
         isSelected
@@ -80,12 +83,24 @@ export const FileCard = memo(function FileCard({
         isBeingDragged && "opacity-50 border-dashed"
       )}
     >
-      {/* Selection Active Check Indicator */}
-      {isSelected && (
-        <div className="absolute top-2 left-2 z-20 size-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md animate-in fade-in zoom-in-75 duration-150">
-          <CheckCircle2 className="size-4" />
-        </div>
-      )}
+      {/* Selection Check Indicator / Button */}
+      <button
+        type="button"
+        data-select-checkbox="true"
+        onClick={(e) => {
+          e.stopPropagation();
+          onItemClick(file, index, e);
+        }}
+        className={cn(
+          "absolute top-2 left-2 z-20 size-6 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md",
+          isSelected
+            ? "bg-primary text-primary-foreground opacity-100 scale-100 animate-in fade-in zoom-in-75 duration-150"
+            : "bg-background/80 hover:bg-background text-muted-foreground border border-border/80 opacity-0 group-hover:opacity-100 hover:scale-105"
+        )}
+        title={isSelected ? "Batalkan pilihan file" : "Pilih file"}
+      >
+        <CheckCircle2 className={cn("size-4", !isSelected && "opacity-40")} />
+      </button>
 
       {/* Live Thumbnail / Visual Preview Banner */}
       <div className="relative w-full h-36 bg-muted/50 border-b border-border flex items-center justify-center overflow-hidden cursor-pointer group/thumb shrink-0 pointer-events-none">
@@ -148,28 +163,9 @@ export const FileCard = memo(function FileCard({
         </div>
 
         <div
-          className="flex items-center justify-between pt-2 border-t border-border mt-auto"
+          className="flex items-center justify-end pt-2 border-t border-border mt-auto"
           onClick={(e) => e.stopPropagation()}
         >
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="text-[11px] h-7 px-2 gap-1 text-primary hover:text-primary"
-          >
-            <a
-              href={
-                file.webViewLink ||
-                `https://drive.google.com/file/d/${file.driveFileId}/view`
-              }
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <ExternalLink className="size-3" />
-              <span>Buka</span>
-            </a>
-          </Button>
-
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"

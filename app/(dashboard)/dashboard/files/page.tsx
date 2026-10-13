@@ -98,6 +98,7 @@ export default function FileExplorerPage() {
     marqueeRect,
     registerItemRef,
     handleItemClick,
+    handleItemPointerDown,
     handleSelectAll,
     handleClearSelection,
     handleContainerMouseDown,
@@ -586,7 +587,7 @@ export default function FileExplorerPage() {
           <div
             ref={explorerContainerRef}
             onMouseDown={handleContainerMouseDown}
-            className="space-y-6 select-none"
+            className="space-y-6 select-none min-h-[500px] pb-32"
           >
             {/* 1. Folders Section */}
             {folders.length > 0 && (
@@ -600,15 +601,18 @@ export default function FileExplorerPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 items-stretch">
                   {folders.map((folder, idx) => (
-                    <FolderCard
+                     <FolderCard
                       key={`folder-${folder.id}-${idx}`}
                       folder={folder}
                       index={idx}
                       isSelected={selectedIds.has(folder.id)}
                       isDragOver={dragOverFolderId === folder.id}
                       isBeingDragged={draggedItem?.id === folder.id}
-                      onItemClick={handleItemClick}
+                      onItemClick={(f, i, e) =>
+                        handleItemClick(f, i, e, () => handleOpenFolder(f))
+                      }
                       onItemDoubleClick={handleOpenFolder}
+                      onItemPointerDown={handleItemPointerDown}
                       onOpenFolder={handleOpenFolder}
                       onOpenMove={(f, e) => {
                         e?.stopPropagation();
@@ -654,8 +658,11 @@ export default function FileExplorerPage() {
                         isSelected={selectedIds.has(file.id)}
                         isBeingDragged={draggedItem?.id === file.id}
                         downloadingId={downloadingId}
-                        onItemClick={handleItemClick}
+                        onItemClick={(f, i, e) =>
+                          handleItemClick(f, i, e, () => setPreviewItem(f))
+                        }
                         onItemDoubleClick={setPreviewItem}
+                        onItemPointerDown={handleItemPointerDown}
                         onPreview={setPreviewItem}
                         onDownload={handleDownloadFile}
                         onOpenMove={(f, e) => {
@@ -683,8 +690,11 @@ export default function FileExplorerPage() {
                     selectedIds={selectedIds}
                     draggedItemId={draggedItem?.id || null}
                     downloadingId={downloadingId}
-                    onItemClick={handleItemClick}
+                    onItemClick={(f, i, e) =>
+                      handleItemClick(f, i, e, () => setPreviewItem(f))
+                    }
                     onItemDoubleClick={setPreviewItem}
+                    onItemPointerDown={handleItemPointerDown}
                     onPreview={setPreviewItem}
                     onDownload={handleDownloadFile}
                     onOpenMove={(f, e) => {

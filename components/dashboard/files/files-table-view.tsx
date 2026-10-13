@@ -33,7 +33,8 @@ interface FilesTableViewProps {
   draggedItemId: string | null;
   downloadingId: string | null;
   onItemClick: (file: CloudItem, index: number, e: React.MouseEvent) => void;
-  onItemDoubleClick: (file: CloudItem, e: React.MouseEvent) => void;
+  onItemDoubleClick?: (file: CloudItem, e: React.MouseEvent) => void;
+  onItemPointerDown?: (file: CloudItem, e: React.PointerEvent) => void;
   onPreview: (file: CloudItem) => void;
   onDownload: (file: CloudItem, e?: React.MouseEvent) => void;
   onOpenMove: (file: CloudItem, e?: React.MouseEvent) => void;
@@ -52,6 +53,7 @@ export const FilesTableView = memo(function FilesTableView({
   downloadingId,
   onItemClick,
   onItemDoubleClick,
+  onItemPointerDown,
   onPreview,
   onDownload,
   onOpenMove,
@@ -87,8 +89,9 @@ export const FilesTableView = memo(function FilesTableView({
                   draggable={isSelected}
                   onDragStart={(e) => isSelected && onDragStart(e, file)}
                   onDragEnd={onDragEnd}
+                  onPointerDown={(e) => onItemPointerDown?.(file, e)}
                   onClick={(e) => onItemClick(file, foldersOffset + idx, e)}
-                  onDoubleClick={(e) => onItemDoubleClick(file, e)}
+                  onDoubleClick={(e) => onItemDoubleClick?.(file, e)}
                   className={cn(
                     "hover:bg-accent/40 transition-colors cursor-pointer",
                     isSelected &&
@@ -97,8 +100,17 @@ export const FilesTableView = memo(function FilesTableView({
                   )}
                 >
                   <td className="py-3 px-4">
-                    <div className="flex items-center gap-3 max-w-md pointer-events-none">
-                      <div className="size-9 rounded-lg bg-muted border border-border flex items-center justify-center text-muted-foreground shrink-0 overflow-hidden relative">
+                    <div className="flex items-center gap-3 max-w-md">
+                      <button
+                        type="button"
+                        data-select-checkbox="true"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onItemClick(file, foldersOffset + idx, e);
+                        }}
+                        className="size-9 rounded-lg bg-muted border border-border flex items-center justify-center text-muted-foreground shrink-0 overflow-hidden relative cursor-pointer hover:border-primary/40"
+                        title={isSelected ? "Batalkan pilihan file" : "Pilih file"}
+                      >
                         {file.thumbnailLink ? (
                           <img
                             src={file.thumbnailLink}
@@ -114,7 +126,7 @@ export const FilesTableView = memo(function FilesTableView({
                             <CheckCircle2 className="size-4" />
                           </div>
                         )}
-                      </div>
+                      </button>
                       <span
                         className={cn(
                           "truncate transition-colors",

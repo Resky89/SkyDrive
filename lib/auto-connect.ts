@@ -31,8 +31,16 @@ export async function autoConnectPrimaryGoogleAccount(userId: string) {
     const existing = user.storageAccounts.find((sa) => sa.email === user.email);
 
     if (existing) {
-      // If storage account exists but has missing or outdated tokens, update it
-      if (googleAuthAccount.refreshToken) {
+      // If storage account exists, only update tokens if googleAuthAccount has a refresh token
+      // and either existing has no refreshToken or googleAuthAccount has newer expiry
+      const shouldUpdate =
+        googleAuthAccount.refreshToken &&
+        (!existing.refreshTokenEnc ||
+          (googleAuthAccount.accessTokenExpiresAt &&
+            existing.tokenExpiresAt &&
+            googleAuthAccount.accessTokenExpiresAt > existing.tokenExpiresAt));
+
+      if (shouldUpdate && googleAuthAccount.refreshToken) {
         await db.storageAccount.update({
           where: { id: existing.id },
           data: {
@@ -45,25 +53,40 @@ export async function autoConnectPrimaryGoogleAccount(userId: string) {
       return existing;
     }
 
-    // Create the storage account automatically from the login credentials
-    const accountData = {
-      userId: user.id,
-      provider: "google_drive",
-      providerAccountId: googleAuthAccount.accountId || user.email,
-      email: user.email,
+    // Create or update the storage account from the login credentials
+    const updateAccountData: {
+      displayName?: string | null;
+      avatarUrl?: string | null;
+      accessTokenEnc: string;
+      refreshTokenEnc?: string;
+      tokenExpiresAt?: Date | null;
+      isActive: boolean;
+    } = {
       displayName: user.name,
       avatarUrl: user.image,
       accessTokenEnc: encrypt(googleAuthAccount.accessToken),
-      refreshTokenEnc: googleAuthAccount.refreshToken ? encrypt(googleAuthAccount.refreshToken) : "",
       tokenExpiresAt: googleAuthAccount.accessTokenExpiresAt,
       isActive: true,
     };
 
+    if (googleAuthAccount.refreshToken) {
+      updateAccountData.refreshTokenEnc = encrypt(googleAuthAccount.refreshToken);
+    }
+
     const storageAccount = await db.storageAccount.upsert({
       where: { userId_email: { userId: user.id, email: user.email } },
-      update: accountData,
+      update: updateAccountData,
       create: {
-        ...accountData,
+        userId: user.id,
+        provider: "google_drive",
+        providerAccountId: googleAuthAccount.accountId || user.email,
+        email: user.email,
+        displayName: user.name,
+        avatarUrl: user.image,
+        accessTokenEnc: encrypt(googleAuthAccount.accessToken),
+        refreshTokenEnc: googleAuthAccount.refreshToken ? encrypt(googleAuthAccount.refreshToken) : "",
+        tokenExpiresAt: googleAuthAccount.accessTokenExpiresAt,
+        isActive: true,
         totalStorage: BigInt(0),
         usedStorage: BigInt(0),
         availableStorage: BigInt(0),

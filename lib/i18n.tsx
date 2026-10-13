@@ -222,6 +222,9 @@ export const translations = {
     accountsFree: "free",
     accountsWarning: "Capacity critical (>90%). Smart engine routes to other drives.",
     accountsSync: "Sync",
+    accountsReconnect: "Reconnect",
+    accountsTokenExpired: "Token Expired",
+    accountsTokenExpiredDesc: "Google Drive token has expired. Reconnect this account to continue syncing.",
     accountsDisconnect: "Disconnect",
 
     // Settings
@@ -465,6 +468,9 @@ export const translations = {
     accountsFree: "tersedia",
     accountsWarning: "Kapasitas kritis (>90%). Mesin cerdas merutekan file ke drive lain.",
     accountsSync: "Sinkron",
+    accountsReconnect: "Sambungkan Ulang",
+    accountsTokenExpired: "Token Kadaluarsa",
+    accountsTokenExpiredDesc: "Token Google Drive telah kadaluarsa. Sambungkan ulang akun ini untuk melanjutkan sinkronisasi.",
     accountsDisconnect: "Putuskan",
 
     // Settings
@@ -708,6 +714,9 @@ export const translations = {
     accountsFree: "空き",
     accountsWarning: "容量が上限に近づいています（90%超過）。他のドライブへ優先ルーティングされます。",
     accountsSync: "同期",
+    accountsReconnect: "再接続",
+    accountsTokenExpired: "トークン期限切れ",
+    accountsTokenExpiredDesc: "Google Drive トークンの有効期限が切れています。同期を再開するには再接続してください。",
     accountsDisconnect: "解除",
 
     // Settings
@@ -951,6 +960,9 @@ export const translations = {
     accountsFree: "剩余",
     accountsWarning: "容量接近上限（超过 90%）。系统将自动路由至其他可用云盘。",
     accountsSync: "同步",
+    accountsReconnect: "重新连接",
+    accountsTokenExpired: "令牌已过期",
+    accountsTokenExpiredDesc: "Google Drive 令牌已过期。请重新连接此账号以恢复同步。",
     accountsDisconnect: "断开连接",
 
     // Settings
@@ -1194,6 +1206,9 @@ export const translations = {
     accountsFree: "여유",
     accountsWarning: "용량이 한계에 도달했습니다 (>90%). 스마트 엔진이 다른 드라이브로 라우팅합니다.",
     accountsSync: "동기화",
+    accountsReconnect: "다시 연결",
+    accountsTokenExpired: "토큰 만료됨",
+    accountsTokenExpiredDesc: "Google Drive 토큰이 만료되었습니다. 동기화를 계속하려면 계정을 다시 연결하세요.",
     accountsDisconnect: "연결 해제",
 
     // Settings

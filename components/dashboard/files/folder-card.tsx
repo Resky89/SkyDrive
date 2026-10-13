@@ -21,7 +21,8 @@ interface FolderCardProps {
   isDragOver: boolean;
   isBeingDragged: boolean;
   onItemClick: (folder: CloudItem, index: number, e: React.MouseEvent) => void;
-  onItemDoubleClick: (folder: CloudItem, e: React.MouseEvent) => void;
+  onItemDoubleClick?: (folder: CloudItem, e: React.MouseEvent) => void;
+  onItemPointerDown?: (folder: CloudItem, e: React.PointerEvent) => void;
   onOpenFolder: (folder: CloudItem) => void;
   onOpenMove: (folder: CloudItem, e?: React.MouseEvent) => void;
   onOpenRename: (folder: CloudItem, e?: React.MouseEvent) => void;
@@ -42,6 +43,7 @@ export const FolderCard = memo(function FolderCard({
   isBeingDragged,
   onItemClick,
   onItemDoubleClick,
+  onItemPointerDown,
   onOpenFolder,
   onOpenMove,
   onOpenRename,
@@ -63,8 +65,9 @@ export const FolderCard = memo(function FolderCard({
       onDragOver={(e) => onDragOver(e, folder.id)}
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, folder.driveFileId || folder.id, folder.name)}
+      onPointerDown={(e) => onItemPointerDown?.(folder, e)}
       onClick={(e) => onItemClick(folder, index, e)}
-      onDoubleClick={(e) => onItemDoubleClick(folder, e)}
+      onDoubleClick={(e) => onItemDoubleClick?.(folder, e)}
       className={cn(
         "p-3.5 flex items-center justify-between gap-3 border transition-all cursor-pointer group card-hover relative h-full rounded-2xl select-none",
         isSelected
@@ -74,22 +77,29 @@ export const FolderCard = memo(function FolderCard({
         isBeingDragged && "opacity-50 border-dashed"
       )}
     >
-      <div className="flex items-center gap-3 min-w-0 pointer-events-none">
-        <div
+      <div className="flex items-center gap-3 min-w-0">
+        <button
+          type="button"
+          data-select-checkbox="true"
+          onClick={(e) => {
+            e.stopPropagation();
+            onItemClick(folder, index, e);
+          }}
           className={cn(
-            "size-9 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform",
+            "size-9 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform cursor-pointer",
             isSelected
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "bg-primary/10 text-primary border border-primary/20"
+              ? "bg-primary text-primary-foreground shadow-sm ring-2 ring-primary/40"
+              : "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20"
           )}
+          title={isSelected ? "Batalkan pilihan folder" : "Pilih folder"}
         >
           {isSelected ? (
             <CheckCircle2 className="size-4.5" />
           ) : (
             <Folder className="size-4.5" />
           )}
-        </div>
-        <div className="flex flex-col min-w-0">
+        </button>
+        <div className="flex flex-col min-w-0 pointer-events-none">
           <span
             className={cn(
               "text-xs truncate transition-colors",

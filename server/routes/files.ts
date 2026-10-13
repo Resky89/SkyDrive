@@ -173,8 +173,9 @@ export const filesRouter = new Hono<Env>()
               displayName: acc.displayName,
             },
           }));
-        } catch (err) {
-          console.warn(`Could not list files for ${acc.email} (${scope}):`, err);
+        } catch (err: unknown) {
+          const msg = (err as Error)?.message || "Unknown error";
+          console.warn(`Could not list files for ${acc.email} (${scope}): ${msg}`);
           return [];
         }
       })

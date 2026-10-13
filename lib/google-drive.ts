@@ -17,12 +17,13 @@ export function createOAuth2Client() {
   );
 }
 
-export function getAuthorizationUrl(state?: string): string {
+export function getAuthorizationUrl(state?: string, loginHint?: string): string {
   const oauth2Client = createOAuth2Client();
   return oauth2Client.generateAuthUrl({
     access_type: "offline",
     scope: SCOPES,
     prompt: "consent select_account",
+    login_hint: loginHint,
     state,
   });
 }
@@ -53,50 +54,83 @@ export async function getGoogleDriveClient(storageAccountId: string) {
   // Auto-refresh token if expired
   oauth2Client.on("tokens", async (newTokens) => {
     if (newTokens.access_token) {
-      await db.storageAccount.update({
-        where: { id: storageAccountId },
-        data: {
-          accessTokenEnc: encrypt(newTokens.access_token),
-          tokenExpiresAt: newTokens.expiry_date
-            ? new Date(newTokens.expiry_date)
-            : undefined,
-        },
-      });
+      const updateData: {
+        accessTokenEnc: string;
+        refreshTokenEnc?: string;
+        tokenExpiresAt?: Date;
+      } = {
+        accessTokenEnc: encrypt(newTokens.access_token),
+        tokenExpiresAt: newTokens.expiry_date
+          ? new Date(newTokens.expiry_date)
+          : undefined,
+      };
+
+      if (newTokens.refresh_token) {
+        updateData.refreshTokenEnc = encrypt(newTokens.refresh_token);
+      }
+
+      await db.storageAccount
+        .update({
+          where: { id: storageAccountId },
+          data: updateData,
+        })
+        .catch((e) => console.error("Error updating refreshed tokens:", e));
     }
   });
 
   return google.drive({ version: "v3", auth: oauth2Client });
 }
 
-export async function getStorageQuota(storageAccountId: string) {
-  const drive = await getGoogleDriveClient(storageAccountId);
-  const { data } = await drive.about.get({
-    fields: "storageQuota,user",
-  });
-
-  const quota = data.storageQuota;
-  const rawLimit = quota?.limit ? BigInt(quota.limit) : BigInt(0);
-  const rawUsed = quota?.usageInDrive
-    ? BigInt(quota.usageInDrive)
-    : quota?.usage
-    ? BigInt(quota.usage)
-    : BigInt(0);
-
-  const total = rawLimit;
-  const used = rawUsed;
-  const available = total >= used ? total - used : BigInt(0);
-  const percentage =
-    total > BigInt(0)
-      ? Math.min((Number(used) / Number(total)) * 100, 100)
-      : 0;
-
-  return {
-    total,
-    used,
-    available,
-    percentage,
-    user: data.user,
+export function isInvalidGrantError(err: unknown): boolean {
+  const e = err as {
+    message?: string;
+    response?: { data?: { error?: string; error_description?: string } };
   };
+  return (
+    Boolean(e?.message?.includes("invalid_grant")) ||
+    e?.response?.data?.error === "invalid_grant" ||
+    Boolean(e?.response?.data?.error_description?.includes("expired or revoked"))
+  );
+}
+
+export async function getStorageQuota(storageAccountId: string) {
+  try {
+    const drive = await getGoogleDriveClient(storageAccountId);
+    const { data } = await drive.about.get({
+      fields: "storageQuota,user",
+    });
+
+    const quota = data.storageQuota;
+    const rawLimit = quota?.limit ? BigInt(quota.limit) : BigInt(0);
+    const rawUsed = quota?.usageInDrive
+      ? BigInt(quota.usageInDrive)
+      : quota?.usage
+      ? BigInt(quota.usage)
+      : BigInt(0);
+
+    const total = rawLimit;
+    const used = rawUsed;
+    const available = total >= used ? total - used : BigInt(0);
+    const percentage =
+      total > BigInt(0)
+        ? Math.min((Number(used) / Number(total)) * 100, 100)
+        : 0;
+
+    return {
+      total,
+      used,
+      available,
+      percentage,
+      user: data.user,
+    };
+  } catch (err) {
+    if (isInvalidGrantError(err)) {
+      throw new Error(
+        "Token Google Drive telah kadaluarsa atau dicabut (invalid_grant). Silakan sambungkan ulang akun ini."
+      );
+    }
+    throw err;
+  }
 }
 
 export async function listFiles(
@@ -109,37 +143,46 @@ export async function listFiles(
     scope?: "mydrive" | "sharedWithMe";
   } = {}
 ) {
-  const drive = await getGoogleDriveClient(storageAccountId);
-  const { query, pageSize = 50, pageToken, folderId, scope = "mydrive" } = options;
+  try {
+    const drive = await getGoogleDriveClient(storageAccountId);
+    const { query, pageSize = 50, pageToken, folderId, scope = "mydrive" } = options;
 
-  let q = "trashed = false";
-  if (folderId && folderId !== "root") {
-    q += ` and '${folderId}' in parents`;
-  } else if (scope === "sharedWithMe") {
-    q += " and sharedWithMe = true";
-  } else {
-    q += " and 'root' in parents";
+    let q = "trashed = false";
+    if (folderId && folderId !== "root") {
+      q += ` and '${folderId}' in parents`;
+    } else if (scope === "sharedWithMe") {
+      q += " and sharedWithMe = true";
+    } else {
+      q += " and 'root' in parents";
+    }
+
+    if (query) {
+      q += ` and name contains '${query.replace(/'/g, "\\'")}'`;
+    }
+
+    const { data } = await drive.files.list({
+      q,
+      pageSize,
+      pageToken: pageToken || undefined,
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      orderBy: "folder,name",
+      fields:
+        "nextPageToken, files(id, name, mimeType, size, createdTime, modifiedTime, webViewLink, thumbnailLink, parents, owners, shared)",
+    });
+
+    return {
+      files: data.files ?? [],
+      nextPageToken: data.nextPageToken,
+    };
+  } catch (err) {
+    if (isInvalidGrantError(err)) {
+      throw new Error(
+        "Token Google Drive telah kadaluarsa atau dicabut (invalid_grant). Silakan sambungkan ulang akun ini."
+      );
+    }
+    throw err;
   }
-
-  if (query) {
-    q += ` and name contains '${query.replace(/'/g, "\\'")}'`;
-  }
-
-  const { data } = await drive.files.list({
-    q,
-    pageSize,
-    pageToken: pageToken || undefined,
-    supportsAllDrives: true,
-    includeItemsFromAllDrives: true,
-    orderBy: "folder,name",
-    fields:
-      "nextPageToken, files(id, name, mimeType, size, createdTime, modifiedTime, webViewLink, thumbnailLink, parents, owners, shared)",
-  });
-
-  return {
-    files: data.files ?? [],
-    nextPageToken: data.nextPageToken,
-  };
 }
 
 export async function createFolderInDrive(

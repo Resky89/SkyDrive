@@ -82,10 +82,13 @@ export const Sidebar = memo(function Sidebar() {
     };
 
     fetchStorage();
+    const handleRefresh = () => fetchStorage();
+    window.addEventListener("skydrive:refresh", handleRefresh);
     const interval = setInterval(fetchStorage, 30000);
     return () => {
       isMounted = false;
       clearInterval(interval);
+      window.removeEventListener("skydrive:refresh", handleRefresh);
     };
   }, []);
 

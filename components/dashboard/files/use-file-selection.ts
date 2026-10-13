@@ -41,12 +41,17 @@ export function useFileSelection({
     }
   }, []);
 
-  const handleItemClick = useCallback(
-    (item: CloudItem, index: number, e: React.MouseEvent) => {
+  // Long-press (tekan tahan) selection state & timer
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressTriggeredRef = useRef<boolean>(false);
+
+  const handleItemPointerDown = useCallback(
+    (item: CloudItem, e: React.PointerEvent) => {
+      // Primary left pointer / touch only
+      if (e.button !== 0) return;
       const target = e.target as HTMLElement;
-      // Prevent selecting when clicking inner interactive controls
       if (
-        target.closest("button") ||
+        target.closest("button:not([data-select-checkbox])") ||
         target.closest("a") ||
         target.closest("[role='menuitem']") ||
         target.closest("[data-prevent-select]")
@@ -54,8 +59,99 @@ export function useFileSelection({
         return;
       }
 
-      if (e.ctrlKey || e.metaKey) {
-        // Ctrl/Cmd + Click: Toggle individual item
+      // If directly clicking checkbox, handle in click immediately
+      if (target.closest("[data-select-checkbox]")) {
+        return;
+      }
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      longPressTriggeredRef.current = false;
+
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+      }
+
+      const cleanupWindowListeners = () => {
+        window.removeEventListener("pointermove", onWindowPointerMove);
+        window.removeEventListener("pointerup", onWindowPointerUp);
+        window.removeEventListener("pointercancel", onWindowPointerUp);
+      };
+
+      const onWindowPointerMove = (ev: PointerEvent) => {
+        const dist = Math.hypot(ev.clientX - startX, ev.clientY - startY);
+        if (dist > 10) {
+          if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+          }
+          cleanupWindowListeners();
+        }
+      };
+
+      const onWindowPointerUp = () => {
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
+        cleanupWindowListeners();
+      };
+
+      window.addEventListener("pointermove", onWindowPointerMove, { passive: true });
+      window.addEventListener("pointerup", onWindowPointerUp);
+      window.addEventListener("pointercancel", onWindowPointerUp);
+
+      longPressTimerRef.current = setTimeout(() => {
+        longPressTriggeredRef.current = true;
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          if (next.has(item.id)) {
+            next.delete(item.id);
+          } else {
+            next.add(item.id);
+          }
+          return next;
+        });
+
+        if (typeof window !== "undefined" && "vibrate" in navigator) {
+          try {
+            navigator.vibrate(50);
+          } catch {}
+        }
+        cleanupWindowListeners();
+      }, 450);
+    },
+    []
+  );
+
+  const handleItemClick = useCallback(
+    (
+      item: CloudItem,
+      index: number,
+      e: React.MouseEvent,
+      onOpen?: (item: CloudItem) => void
+    ) => {
+      const target = e.target as HTMLElement;
+      // Prevent selecting when clicking inner interactive controls
+      if (
+        target.closest("button:not([data-select-checkbox])") ||
+        target.closest("a") ||
+        target.closest("[role='menuitem']") ||
+        target.closest("[data-prevent-select]")
+      ) {
+        return;
+      }
+
+      // If this click was triggered right after a long-press, consume it and don't open
+      if (longPressTriggeredRef.current) {
+        longPressTriggeredRef.current = false;
+        return;
+      }
+
+      const isCheckboxClick = Boolean(target.closest("[data-select-checkbox]"));
+
+      if (e.ctrlKey || e.metaKey || isCheckboxClick) {
+        // Ctrl/Cmd + Click or Checkbox click: Toggle individual item
         setSelectedIds((prev) => {
           const next = new Set(prev);
           if (next.has(item.id)) {
@@ -77,13 +173,28 @@ export function useFileSelection({
           rangeIds.forEach((id) => next.add(id));
           return next;
         });
-      } else {
-        // Single Click: Focus single item
-        setSelectedIds(new Set([item.id]));
+      } else if (selectedIds.size > 0) {
+        // When selection mode is active (one or more items are selected):
+        // Clicking on an item toggles its selection
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          if (next.has(item.id)) {
+            next.delete(item.id);
+          } else {
+            next.add(item.id);
+          }
+          return next;
+        });
         setLastSelectedIndex(index);
+      } else {
+        // Normal mode (selectedIds.size === 0):
+        // Clicking does NOT select! It OPENS the file or folder!
+        if (onOpen) {
+          onOpen(item);
+        }
       }
     },
-    [items, lastSelectedIndex]
+    [items, lastSelectedIndex, selectedIds.size]
   );
 
   const handleSelectAll = useCallback(() => {
@@ -259,6 +370,8 @@ export function useFileSelection({
     marqueeRect,
     registerItemRef,
     handleItemClick,
+    handleItemPointerDown,
+    isSelectionMode: selectedIds.size > 0,
     handleSelectAll,
     handleClearSelection,
     handleContainerMouseDown,

@@ -54,18 +54,40 @@ export function Header({ accounts: initialAccounts, onRefresh }: HeaderProps) {
     }
   }, [initialAccounts, fetchAccounts]);
 
+  useEffect(() => {
+    const handleRefresh = () => fetchAccounts();
+    window.addEventListener("skydrive:refresh", handleRefresh);
+    return () => window.removeEventListener("skydrive:refresh", handleRefresh);
+  }, [fetchAccounts]);
+
   const handleSyncAll = async () => {
     setIsSyncing(true);
     try {
       const res = await fetch("/api/google/sync", { method: "POST" });
-      const data = await res.json();
-      if (res.ok) {
-        toast.success(`Synchronized ${data.count || 0} storage account quotas`);
+      const data = await res.json().catch(() => null);
+      if (res.ok && data?.success) {
+        if (data.failedCount && data.failedCount > 0) {
+          toast.warning(
+            `Synchronized ${data.count || 0} accounts (${data.failedCount} failed${
+              data.hasInvalidGrant ? " - token expired" : ""
+            }). Buka halaman Akun untuk sambungkan ulang.`,
+            {
+              action: {
+                label: "Buka Akun",
+                onClick: () => {
+                  window.location.href = "/dashboard/accounts";
+                },
+              },
+            }
+          );
+        } else {
+          toast.success(`Synchronized ${data.count || 0} storage account quotas`);
+        }
         await fetchAccounts();
         onRefresh?.();
         window.dispatchEvent(new CustomEvent("skydrive:refresh"));
       } else {
-        toast.error("Failed to sync account quotas");
+        toast.error(data?.error || "Failed to sync account quotas");
       }
     } catch {
       toast.error("Sync request failed");
