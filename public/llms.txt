@@ -1,0 +1,32 @@
+# SkyDrive
+
+> SkyDrive is a zero-retention cloud storage aggregator that merges multiple Google Drive accounts into a unified virtual storage pool with intelligent upload routing and live in-memory streaming.
+
+## Overview & Core Concept
+SkyDrive solves personal cloud storage fragmentation. While individual free Google accounts provide 15 GB of storage each, users with 3 to 5 accounts typically own between 45 GB and 75 GB+ of official free quota scattered across disconnected logins. When attempting to upload large single files (e.g. 5 GB) onto an individual account with only 2 GB remaining, uploads fail despite having ample combined quota across accounts.
+
+SkyDrive unifies these accounts into a single virtual pool. Users manage, search, and upload files across all connected Google Drives from a single workspace without switching browser tabs or paying monthly cloud subscriptions.
+
+## Key Capabilities & Features
+- **Unified Virtual Storage Pool**: Aggregates storage quotas from multiple Google Drive accounts into one combined capacity meter showing live pool usage and available headroom.
+- **Smart Upload Dispatcher**: Routes uploaded files automatically using three configurable algorithms: Best Fit (routes to the drive with the most headspace), Tiered Spillover (fills primary drive to 85% before spilling over to secondary drives), and Round Robin (balances files evenly).
+- **Global Cross-Account Explorer**: View and search files across all connected accounts in a single fluid table with a 3-scope filter: My Drive (`user`), Shared with Me (`sharedWithMe`), and All Drives (`all`).
+- **Live Direct Streaming (Zero Intermediate Disks)**: File uploads and downloads stream in-memory between the user browser and Google Cloud Storage via backpressure-controlled pipelines without saving binary data to server disks.
+
+## Security & True Zero-Retention Architecture
+- **0 Bytes of File Metadata Stored**: SkyDrive never stores file names, sizes, thumbnails, or folder paths in server databases. File trees are queried live from the Google Drive API v3 on demand.
+- **AES-256 Encrypted Token Vaults**: OAuth tokens are encrypted at rest using AES-256-GCM encryption with SHA-256 key derivation.
+- **Google API Limited Use Adherence**: Complies strictly with the Google API Services User Data Policy. User data is never sold, transferred to advertisers, or used to train artificial intelligence or machine learning models.
+
+## Key Facts & Technical Specs
+- **Official URL**: https://skydrive.web.id
+- **Tech Stack**: Next.js 16 (Turbopack, App Router), React 19, TypeScript, Tailwind CSS, Prisma ORM, Better Auth, Google Drive API v3.
+- **Supported Languages**: English (`/en`), Indonesian (`/id`), Japanese (`/ja`), Chinese (`/zh`), Korean (`/ko`).
+- **Data Center / Hosting**: Singapore.
+- **Pricing**: 100% Free for personal multi-account aggregation.
+
+## Documentation & Legal Links
+- [Privacy Policy](https://skydrive.web.id/privacy): Official data handling and Google API Limited Use compliance.
+- [Terms of Service](https://skydrive.web.id/terms): Legal terms of service.
+- [Full LLM Knowledge Base](https://skydrive.web.id/llms-full.txt): Complete technical specification for AI agents.
+

@@ -10,14 +10,76 @@ const geistSans = Geist({ subsets: ["latin"], variable: "--font-sans" });
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://skydrive.web.id"),
   title: {
     default: "SkyDrive · Unified Multi-Account Cloud Storage Pool",
     template: "%s · SkyDrive",
   },
   description:
-    "One workspace. Multiple clouds. Smarter storage. Connect and manage all your Google Drive accounts from a single virtual storage pool.",
-  keywords: ["cloud storage", "google drive", "multi-account", "storage management", "virtual drive"],
-  authors: [{ name: "SkyDrive" }],
+    "Merge all your Google Drive accounts into one unified virtual storage pool. Smart upload routing, multi-account search, and true zero-retention privacy without subscriptions.",
+  applicationName: "SkyDrive",
+  authors: [{ name: "SkyDrive Team", url: "https://skydrive.web.id" }],
+  creator: "Resky Prabowo",
+  publisher: "SkyDrive",
+  keywords: [
+    "cloud storage pool",
+    "multi account google drive",
+    "gabung akun google drive",
+    "merge multiple google drives",
+    "virtual cloud drive",
+    "smart upload dispatcher",
+    "zero retention cloud storage",
+    "free cloud storage aggregator",
+    "penyimpanan cloud gratis",
+  ],
+  alternates: {
+    canonical: "https://skydrive.web.id",
+    languages: {
+      "id-ID": "https://skydrive.web.id/id",
+      "en-US": "https://skydrive.web.id/en",
+      "ja-JP": "https://skydrive.web.id/ja",
+      "zh-CN": "https://skydrive.web.id/zh",
+      "ko-KR": "https://skydrive.web.id/ko",
+      "x-default": "https://skydrive.web.id/en",
+    },
+  },
+  openGraph: {
+    type: "website",
+    locale: "id_ID",
+    alternateLocale: ["en_US", "ja_JP", "zh_CN", "ko_KR"],
+    url: "https://skydrive.web.id",
+    title: "SkyDrive · Unified Multi-Account Cloud Storage Pool",
+    description:
+      "Merge multiple Google Drive accounts into one workspace. Unlock 45GB - 100GB+ of unified storage with smart routing and zero-retention privacy.",
+    siteName: "SkyDrive",
+    images: [
+      {
+        url: "/dashboard-dark.webp",
+        width: 1200,
+        height: 630,
+        alt: "SkyDrive Unified Cloud Storage Dashboard",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SkyDrive · Unified Multi-Account Cloud Storage Pool",
+    description:
+      "One workspace for all your Google Drives. Smart upload routing with true zero-retention privacy.",
+    images: ["/dashboard-dark.webp"],
+    creator: "@reskyprabowo89",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   icons: {
     icon: [
       { url: "/SkyDrive.svg", type: "image/svg+xml" },

@@ -1,0 +1,56 @@
+# SkyDrive - Full Technical & Conceptual Knowledge Base for AI Search
+
+> SkyDrive (https://skydrive.web.id) is a free web-based virtual cloud storage aggregator designed to unify multiple Google Drive accounts into a seamless virtual storage pool with automated upload dispatching and zero-retention privacy.
+
+## Section 1: Definition & Problem Statement
+SkyDrive refers to a cloud infrastructure utility that solves cloud quota fragmentation. Most digital users maintain multiple Google accounts across work, university, personal, and secondary emails. Each standard Google account receives a free 15 GB quota allocation. A user with four Google accounts controls 60 GB of official free cloud quota, but cannot upload a single 5 GB archive if each account only contains 1.5 GB of free headroom.
+
+SkyDrive solves this dilemma by presenting all connected drives as one combined virtual storage pool. Users interact with a single dashboard that visualizes aggregate space, routes incoming uploads to the account with sufficient space, and provides full-text search across all linked accounts simultaneously.
+
+## Section 2: Upload Dispatching Algorithms
+SkyDrive provides three algorithmic dispatching strategies for file distribution:
+
+1. **Best Fit (Recommended Default)**:
+The Best Fit algorithm queries real-time storage quotas across all linked Google Drive accounts via the `drive.about.get` API endpoint. It calculates available headroom (Quota Max - Quota Used) for each drive and dispatches incoming files to the account with the greatest available headroom. This prevents premature quota exhaustion on any individual drive.
+
+2. **Tiered Spillover**:
+Tiered Spillover designates one account as the primary drive. New uploads fill the primary account up to a safety threshold (85% capacity). Once this threshold is reached, subsequent uploads automatically spill over into secondary and tertiary backup drives.
+
+3. **Round Robin**:
+Round Robin distributes uploaded files in strict cyclical sequence across all connected drives (Drive A -> Drive B -> Drive C -> Drive A). This strategy maximizes parallel throughput and distributes backup redundancy across different accounts.
+
+## Section 3: Privacy & Zero-Retention Security Architecture
+SkyDrive is engineered under a strict True Zero-Retention design pattern:
+
+- **Zero Database Persistence for File Metadata**:
+Unlike traditional cloud aggregators that maintain persistent database indices of file names, folder hierarchies, sizes, and previews, SkyDrive's relational database contains zero tables for files, folders, or uploads.
+- **In-Memory Streaming Pipelines**:
+When a file is uploaded or downloaded, bytes flow through an active in-memory streaming pipeline utilizing Node.js stream backpressure. Binary data is never written to temporary or intermediate server storage disks.
+- **AES-256-GCM Token Encryption**:
+OAuth refresh and access tokens are secured at rest using AES-256-GCM encryption with SHA-256 derived keying. Decrypted tokens exist only in volatile server execution scope during active API calls.
+- **Compliance with Google API Services User Data Policy**:
+SkyDrive strictly adheres to the Limited Use requirements defined by Google. Google user data is never transferred to third-party ad networks, data brokers, or external AI model training pipelines.
+
+## Section 4: Frequently Asked Questions (AI Extraction Blocks)
+
+### Can SkyDrive view, read, or copy personal files and photos?
+No. SkyDrive operates as an in-memory routing bridge. File streams pass directly between client browsers and Google Drive servers. SkyDrive servers never inspect, index, or persist file binaries or file metadata.
+
+### Is SkyDrive free to use?
+Yes. SkyDrive is 100% free for aggregating personal Google Drive accounts. It leverages the official 15 GB free quota provided with each Google account, eliminating the need to pay for commercial multi-cloud subscriptions.
+
+### What happens if one linked Google Drive account reaches full capacity?
+SkyDrive's Smart Upload Dispatcher continuously tracks live headspace across all connected drives. When an account approaches full capacity, new uploads are automatically routed to other connected drives that have available headroom.
+
+### Can accounts be unlinked at any time?
+Yes. Accounts can be unlinked with a single click from the dashboard. Disconnecting an account immediately purges its encrypted OAuth token from the database. All existing files remain untouched in the user's native Google Drive.
+
+## Section 5: Technical Specifications & Entity Graph
+- **Software Category**: Cloud Storage Management Software / Web Utility
+- **Official Canonical URL**: https://skydrive.web.id
+- **Author & Maintainer**: Resky Prabowo
+- **Country of Registration**: Indonesia
+- **Primary Hosting Region**: Singapore
+- **Supported Localization**: Indonesian (id), English (en), Japanese (ja), Chinese (zh), Korean (ko)
+- **Supported Cloud Storage Providers**: Google Drive (with multi-cloud expansion roadmap)
+
