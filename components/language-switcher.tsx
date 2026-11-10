@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { ChevronDown, Check } from "lucide-react";
 import { useLanguage, LANGUAGES, Language } from "@/lib/i18n";
 import { CountryFlag } from "@/components/ui/country-flag";
@@ -13,10 +14,24 @@ interface LanguageSwitcherProps {
 
 export function LanguageSwitcher({ className, variant = "pill" }: LanguageSwitcherProps) {
   const { language, setLanguage, t } = useLanguage();
+  const router = useRouter();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const current = LANGUAGES.find((l) => l.code === language) || LANGUAGES[1];
+
+  const handleLanguageChange = (newCode: Language) => {
+    setLanguage(newCode);
+    setIsOpen(false);
+
+    // If on landing page (either '/' or '/id', '/en', etc.)
+    const isLanding = pathname === "/" || /^\/(id|en|ja|zh|ko)(\/.*)?$/.test(pathname);
+    if (isLanding) {
+      const cleanPath = pathname.replace(/^\/(id|en|ja|zh|ko)/, "");
+      router.push(`/${newCode}${cleanPath}`);
+    }
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -61,10 +76,7 @@ export function LanguageSwitcher({ className, variant = "pill" }: LanguageSwitch
                 <button
                   key={lang.code}
                   type="button"
-                  onClick={() => {
-                    setLanguage(lang.code);
-                    setIsOpen(false);
-                  }}
+                  onClick={() => handleLanguageChange(lang.code)}
                   className={cn(
                     "w-full flex items-center justify-between px-2.5 py-1.5 text-xs rounded-xl transition-colors cursor-pointer text-left",
                     isSelected

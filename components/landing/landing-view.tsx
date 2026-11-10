@@ -37,7 +37,7 @@ interface LandingViewProps {
 }
 
 export function LandingView({ user }: LandingViewProps) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   return (
     <SmoothScrollProvider>
@@ -54,7 +54,7 @@ export function LandingView({ user }: LandingViewProps) {
             {/* Left: Official SkyDrive Logo */}
             <div className="flex items-center gap-3">
               <Link
-                href="/"
+                href={`/${language}`}
                 className="flex items-center gap-2 group transition-transform active:scale-95"
               >
                 <Image

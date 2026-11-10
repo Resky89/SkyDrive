@@ -4,6 +4,7 @@ import React, { useRef, useState } from "react";
 import Image from "next/image";
 import { motion, useScroll, useTransform, useSpring, useMotionValue } from "framer-motion";
 import { Cloud } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 interface DashboardHero3DProps {
@@ -17,6 +18,7 @@ export const DashboardHero3D: React.FC<DashboardHero3DProps> = ({
   lightImageSrc = "/dashboard-light.webp",
   darkImageSrc = "/dashboard-dark.webp",
 }) => {
+  const { t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -100,9 +102,9 @@ export const DashboardHero3D: React.FC<DashboardHero3DProps> = ({
 
             {/* Right Status Badge */}
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/25 text-[10px] sm:text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
+              <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/25 text-[10px] sm:text-[11px] font-sans text-emerald-600 dark:text-emerald-400">
                 <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="font-medium">AES-256 E2E Active</span>
+                <span className="font-medium">{t.heroSecureBadge}</span>
               </div>
             </div>
           </div>

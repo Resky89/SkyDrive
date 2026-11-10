@@ -53,7 +53,7 @@ export const SecurityArchitecture = memo(function SecurityArchitecture() {
               )}
             >
               <Server className="size-3.5" />
-              <span>Aliran Data Langsung</span>
+              <span>{t.secTabDirectFlow}</span>
             </button>
             <button
               type="button"
@@ -66,7 +66,7 @@ export const SecurityArchitecture = memo(function SecurityArchitecture() {
               )}
             >
               <KeyRound className="size-3.5" />
-              <span>Privasi & Izin Google</span>
+              <span>{t.secTabPrivacy}</span>
             </button>
             <button
               type="button"
@@ -79,13 +79,13 @@ export const SecurityArchitecture = memo(function SecurityArchitecture() {
               )}
             >
               <ShieldCheck className="size-3.5" />
-              <span>Perbandingan Keamanan</span>
+              <span>{t.secTabComparison}</span>
             </button>
           </div>
 
           <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-500">
             <span className="size-2 rounded-full bg-emerald-500 shadow-xs" />
-            <span>100% Proteksi Google Drive</span>
+            <span>{t.secProtectionBadge}</span>
           </div>
         </div>
 
@@ -98,13 +98,13 @@ export const SecurityArchitecture = memo(function SecurityArchitecture() {
                 <div className="size-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
                   <Server className="size-5" />
                 </div>
-                <h4 className="text-sm font-bold text-foreground">File Langsung ke Akun Anda</h4>
+                <h4 className="text-sm font-bold text-foreground">{t.secPillar1Title}</h4>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  File yang Anda upload langsung dikirim ke akun Google Drive Anda. SkyDrive tidak pernah menyimpan salinan fisik file di server perantara.
+                  {t.secPillar1Desc}
                 </p>
                 <div className="text-[11px] text-emerald-500 font-semibold pt-2 border-t border-border/50 flex items-center gap-1.5">
                   <Check className="size-3" />
-                  <span>Nol penyimpanan sementara</span>
+                  <span>{t.secPillar1Tag}</span>
                 </div>
               </div>
 
@@ -113,13 +113,13 @@ export const SecurityArchitecture = memo(function SecurityArchitecture() {
                 <div className="size-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-500">
                   <ShieldCheck className="size-5" />
                 </div>
-                <h4 className="text-sm font-bold text-foreground">Akses Izin Minimal</h4>
+                <h4 className="text-sm font-bold text-foreground">{t.secPillar2Title}</h4>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  SkyDrive hanya meminta izin untuk mengelola file yang Anda upload di sini. Kami sama sekali tidak bisa membaca email Gmail, kontak, atau file pribadi lainnya.
+                  {t.secPillar2Desc}
                 </p>
                 <div className="text-[11px] text-sky-500 font-semibold pt-2 border-t border-border/50 flex items-center gap-1.5">
                   <Check className="size-3" />
-                  <span>Izin terbatas drive.file</span>
+                  <span>{t.secPillar2Tag}</span>
                 </div>
               </div>
 
@@ -128,13 +128,13 @@ export const SecurityArchitecture = memo(function SecurityArchitecture() {
                 <div className="size-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-500">
                   <Database className="size-5" />
                 </div>
-                <h4 className="text-sm font-bold text-foreground">Privasi Sepenuhnya Terjaga</h4>
+                <h4 className="text-sm font-bold text-foreground">{t.secPillar3Title}</h4>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Hanya informasi nama file dan ukuran yang ditampilkan di dashboard untuk pencarian mudah. Isi dokumen Anda tidak pernah diintip ataupun dijual.
+                  {t.secPillar3Desc}
                 </p>
                 <div className="text-[11px] text-indigo-500 font-semibold pt-2 border-t border-border/50 flex items-center gap-1.5">
                   <Check className="size-3" />
-                  <span>File Anda tetap milik Anda</span>
+                  <span>{t.secPillar3Tag}</span>
                 </div>
               </div>
             </div>
@@ -142,8 +142,8 @@ export const SecurityArchitecture = memo(function SecurityArchitecture() {
             {/* Visual Stream Pipe Diagram (Clean & Human-friendly) */}
             <div className="p-5 rounded-2xl bg-secondary/20 border border-border/60 text-xs text-muted-foreground">
               <div className="flex items-center justify-between pb-3 mb-3 border-b border-border/50 text-[11px]">
-                <span className="font-semibold text-foreground">Alur Pengunggahan File Anda:</span>
-                <span className="text-emerald-500 font-medium">Jalur Aman & Terenkripsi</span>
+                <span className="font-semibold text-foreground">{t.secFlowTitle}</span>
+                <span className="text-emerald-500 font-medium">{t.secFlowBadge}</span>
               </div>
 
               <div className="flex flex-col md:flex-row items-center justify-between gap-3 sm:gap-4 py-2 w-full">
@@ -154,10 +154,10 @@ export const SecurityArchitecture = memo(function SecurityArchitecture() {
                   </div>
                   <div className="min-w-0">
                     <span className="text-muted-foreground block text-[10px] uppercase font-bold tracking-wide">
-                      1. Perangkat Anda
+                      {t.secFlowStep1Title}
                     </span>
                     <span className="font-semibold text-foreground text-xs sm:text-sm block truncate">
-                      Pilih File untuk Diunggah
+                      {t.secFlowStep1Desc}
                     </span>
                   </div>
                 </div>
@@ -174,10 +174,10 @@ export const SecurityArchitecture = memo(function SecurityArchitecture() {
                   </div>
                   <div className="min-w-0">
                     <span className="text-primary/90 block text-[10px] uppercase font-bold tracking-wide">
-                      2. SkyDrive Smart Hub
+                      {t.secFlowStep2Title}
                     </span>
                     <span className="font-semibold text-foreground text-xs sm:text-sm block truncate">
-                      Arahkan ke Drive Terluang
+                      {t.secFlowStep2Desc}
                     </span>
                   </div>
                 </div>
@@ -194,10 +194,10 @@ export const SecurityArchitecture = memo(function SecurityArchitecture() {
                   </div>
                   <div className="min-w-0">
                     <span className="text-emerald-500 block text-[10px] uppercase font-bold tracking-wide">
-                      3. Google Drive Anda
+                      {t.secFlowStep3Title}
                     </span>
                     <span className="font-semibold text-foreground text-xs sm:text-sm block truncate">
-                      Tersimpan Aman di Google
+                      {t.secFlowStep3Desc}
                     </span>
                   </div>
                 </div>
@@ -215,24 +215,24 @@ export const SecurityArchitecture = memo(function SecurityArchitecture() {
                 <div className="size-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500">
                   <Lock className="size-5" />
                 </div>
-                <h4 className="text-lg font-bold text-foreground">Perlindungan Kunci Enkripsi Standar Tinggi</h4>
+                <h4 className="text-lg font-bold text-foreground">{t.secVaultCard1Title}</h4>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  Setiap kunci integrasi akun Google Anda diamankan menggunakan enkripsi berlapis AES-256 (standar yang dipakai perbankan). Data akses Anda tidak dapat dibuka oleh pihak luar.
+                  {t.secVaultCard1Desc}
                 </p>
               </div>
 
               <div className="space-y-2.5 pt-4 border-t border-border/60 text-xs">
                 <div className="flex items-center gap-2 text-foreground font-medium">
                   <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-                  <span>Kunci terenkripsi otomatis sebelum disimpan</span>
+                  <span>{t.secVaultCheck1}</span>
                 </div>
                 <div className="flex items-center gap-2 text-foreground font-medium">
                   <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-                  <span>Tidak ada kunci mentah yang dapat diakses sembarang staf</span>
+                  <span>{t.secVaultCheck2}</span>
                 </div>
                 <div className="flex items-center gap-2 text-foreground font-medium">
                   <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-                  <span>Sistem otentikasi resmi langsung dari Google</span>
+                  <span>{t.secVaultCheck3}</span>
                 </div>
               </div>
             </div>
@@ -243,24 +243,24 @@ export const SecurityArchitecture = memo(function SecurityArchitecture() {
                 <div className="size-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-500">
                   <KeyRound className="size-5" />
                 </div>
-                <h4 className="text-lg font-bold text-foreground">Kendali Penuh Selalu di Tangan Anda</h4>
+                <h4 className="text-lg font-bold text-foreground">{t.secVaultCard2Title}</h4>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  SkyDrive tidak pernah meminta kata sandi Anda. Anda login langsung melalui sistem keamanan Google, dan Anda bebas memutuskan akun kapan saja.
+                  {t.secVaultCard2Desc}
                 </p>
               </div>
 
               <div className="space-y-2.5 pt-4 border-t border-border/60 text-xs">
                 <div className="flex items-center gap-2 text-foreground font-medium">
                   <CheckCircle2 className="size-4 text-sky-500 shrink-0" />
-                  <span>1-Klik putuskan akun langsung dari dashboard</span>
+                  <span>{t.secVaultCheck4}</span>
                 </div>
                 <div className="flex items-center gap-2 text-foreground font-medium">
                   <CheckCircle2 className="size-4 text-sky-500 shrink-0" />
-                  <span>Bisa dicabut kapan pun lewat myaccount.google.com</span>
+                  <span>{t.secVaultCheck5}</span>
                 </div>
                 <div className="flex items-center gap-2 text-foreground font-medium">
                   <CheckCircle2 className="size-4 text-sky-500 shrink-0" />
-                  <span>File di Google Drive Anda tetap 100% utuh</span>
+                  <span>{t.secVaultCheck6}</span>
                 </div>
               </div>
             </div>
@@ -274,21 +274,21 @@ export const SecurityArchitecture = memo(function SecurityArchitecture() {
             <div className="p-5 sm:p-6 rounded-2xl bg-destructive/5 border border-destructive/20 space-y-4">
               <div className="flex items-center gap-2 text-destructive font-bold text-sm">
                 <XCircle className="size-4.5" />
-                <span>Penyedia Cloud Agregator Biasa</span>
+                <span>{t.secCompOtherTitle}</span>
               </div>
 
               <div className="space-y-3 text-xs sm:text-sm text-muted-foreground">
                 <div className="flex items-start gap-2.5">
                   <XCircle className="size-4 text-destructive shrink-0 mt-0.5" />
-                  <span>File Anda ditampung dulu di hard drive server perantara sebelum dikirim.</span>
+                  <span>{t.secCompOther1}</span>
                 </div>
                 <div className="flex items-start gap-2.5">
                   <XCircle className="size-4 text-destructive shrink-0 mt-0.5" />
-                  <span>Risiko file bocor atau tertinggal jika server mereka mengalami masalah.</span>
+                  <span>{t.secCompOther2}</span>
                 </div>
                 <div className="flex items-start gap-2.5">
                   <XCircle className="size-4 text-destructive shrink-0 mt-0.5" />
-                  <span>Sering meminta izin akses penuh ke seluruh isi akun Google Anda.</span>
+                  <span>{t.secCompOther3}</span>
                 </div>
               </div>
             </div>
@@ -297,21 +297,21 @@ export const SecurityArchitecture = memo(function SecurityArchitecture() {
             <div className="p-5 sm:p-6 rounded-2xl bg-emerald-500/5 border border-emerald-500/25 space-y-4">
               <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-sm">
                 <CheckCircle2 className="size-4.5" />
-                <span>Pendekatan Aman SkyDrive</span>
+                <span>{t.secCompSkyDriveTitle}</span>
               </div>
 
               <div className="space-y-3 text-xs sm:text-sm text-muted-foreground">
                 <div className="flex items-start gap-2.5">
                   <CheckCircle2 className="size-4 text-emerald-500 shrink-0 mt-0.5" />
-                  <span>File langsung mengalir dari browser Anda ke Google Drive tanpa mampir ke server fisik kami.</span>
+                  <span>{t.secCompSkyDrive1}</span>
                 </div>
                 <div className="flex items-start gap-2.5">
                   <CheckCircle2 className="size-4 text-emerald-500 shrink-0 mt-0.5" />
-                  <span>Kunci enkripsi aman dan akses dapat diputus kapan saja dengan 1 klik.</span>
+                  <span>{t.secCompSkyDrive2}</span>
                 </div>
                 <div className="flex items-start gap-2.5">
                   <CheckCircle2 className="size-4 text-emerald-500 shrink-0 mt-0.5" />
-                  <span>Hanya mengelola file yang diunggah melalui SkyDrive; file pribadi lainnya tidak disentuh.</span>
+                  <span>{t.secCompSkyDrive3}</span>
                 </div>
               </div>
             </div>

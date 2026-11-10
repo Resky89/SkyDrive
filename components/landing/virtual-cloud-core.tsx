@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, memo } from "react";
+import { useState, useRef, useEffect, memo, useMemo } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   Cpu,
   Layers,
-  Terminal,
   ArrowRight,
   ShieldAlert,
   SlidersHorizontal,
@@ -31,23 +30,23 @@ interface DriveNode {
   color: string;
 }
 
-const mockNodes: DriveNode[] = [
+const DEFAULT_NODES: DriveNode[] = [
   {
     id: "node-1",
     nameKey: "vccPersonalDrive",
-    email: "primary.storage@gmail.com",
-    tier: "Primary Storage Node (15 GB)",
-    used: 12.8,
+    email: "email.utama@gmail.com",
+    tier: "Personal Google Account (15 GB)",
+    used: 13.8,
     total: 15,
     latencyMs: 18,
-    health: "warning", // near 90%
+    health: "warning",
     color: "from-sky-500 to-blue-600",
   },
   {
     id: "node-2",
     nameKey: "vccWorkspaceDrive",
-    email: "secondary.cloud@gmail.com",
-    tier: "High-Capacity Storage Node (2 TB)",
+    email: "email.kantor.kuliah@gmail.com",
+    tier: "School / Work Account (2 TB)",
     used: 480,
     total: 2048,
     latencyMs: 12,
@@ -57,10 +56,10 @@ const mockNodes: DriveNode[] = [
   {
     id: "node-3",
     nameKey: "vccVaultDrive",
-    email: "archive.vault@gmail.com",
-    tier: "Archive Storage Node (100 GB)",
-    used: 24.5,
-    total: 100,
+    email: "email.cadangan@gmail.com",
+    tier: "Backup Google Account (15 GB)",
+    used: 2.5,
+    total: 15,
     latencyMs: 15,
     health: "optimal",
     color: "from-cyan-400 to-sky-500",
@@ -76,45 +75,83 @@ interface StrategyOption {
   desc: string;
 }
 
-const ROUTING_STRATEGIES: StrategyOption[] = [
-  {
-    id: "best-fit",
-    name: "Max Headroom (Best-Fit)",
-    tag: "Capacity-Driven",
-    desc: "Evaluates real-time drive free capacity and routes directly to the node with the highest available storage space.",
-  },
-  {
-    id: "tiered-spillover",
-    name: "Tiered Spillover",
-    tag: "Cost-Optimized",
-    desc: "Fills primary storage node until 85% safety threshold, then seamlessly overflows into high-capacity secondary storage.",
-  },
-  {
-    id: "round-robin",
-    name: "API Rate-Limit Balancing",
-    tag: "High-Throughput",
-    desc: "Distributes concurrent multipart streams evenly across accounts to evade Google Drive 10 QPS per-user quotas.",
-  },
-];
-
 const SIMULATION_PAYLOADS = [
-  { name: "Raw_Production_Footage.mov", size: "4.2 GB", sizeGB: 4.2, mime: "video/quicktime" },
-  { name: "Neural_Weights_Checkpoint.bin", size: "1.4 GB", sizeGB: 1.4, mime: "application/octet-stream" },
-  { name: "PostgreSQL_Dump_Archive.sql.gz", size: "320 MB", sizeGB: 0.32, mime: "application/gzip" },
+  { name: "Video_Liburan_Keluarga_4K.mp4", size: "4.2 GB", sizeGB: 4.2, mime: "video/mp4" },
+  { name: "Folder_Skripsi_dan_Dokumen_Final.zip", size: "1.4 GB", sizeGB: 1.4, mime: "application/zip" },
+  { name: "Koleksi_Foto_Resolusi_Tinggi.zip", size: "680 MB", sizeGB: 0.68, mime: "application/zip" },
 ];
 
 export const VirtualCloudCore = memo(function VirtualCloudCore() {
   const { t } = useLanguage();
+
+  const mockNodes: DriveNode[] = useMemo(
+    () => [
+      {
+        id: "node-1",
+        nameKey: "vccPersonalDrive",
+        email: "email.utama@gmail.com",
+        tier: t.vccNode1Tier,
+        used: 13.8,
+        total: 15,
+        latencyMs: 18,
+        health: "warning",
+        color: "from-sky-500 to-blue-600",
+      },
+      {
+        id: "node-2",
+        nameKey: "vccWorkspaceDrive",
+        email: "email.kantor.kuliah@gmail.com",
+        tier: t.vccNode2Tier,
+        used: 480,
+        total: 2048,
+        latencyMs: 12,
+        health: "optimal",
+        color: "from-blue-600 to-indigo-600",
+      },
+      {
+        id: "node-3",
+        nameKey: "vccVaultDrive",
+        email: "email.cadangan@gmail.com",
+        tier: t.vccNode3Tier,
+        used: 2.5,
+        total: 15,
+        latencyMs: 15,
+        health: "optimal",
+        color: "from-cyan-400 to-sky-500",
+      },
+    ],
+    [t]
+  );
+
+  const routingStrategies: StrategyOption[] = useMemo(
+    () => [
+      {
+        id: "best-fit",
+        name: t.vccStrat1Name,
+        tag: t.vccStrat1Tag,
+        desc: t.vccStrat1Desc,
+      },
+      {
+        id: "tiered-spillover",
+        name: t.vccStrat2Name,
+        tag: t.vccStrat2Tag,
+        desc: t.vccStrat2Desc,
+      },
+      {
+        id: "round-robin",
+        name: t.vccStrat3Name,
+        tag: t.vccStrat3Tag,
+        desc: t.vccStrat3Desc,
+      },
+    ],
+    [t]
+  );
+
   const [activeStrategy, setActiveStrategy] = useState<RoutingStrategy>("best-fit");
-  const [selectedNode, setSelectedNode] = useState<DriveNode>(mockNodes[1]);
+  const [selectedNode, setSelectedNode] = useState<DriveNode>(DEFAULT_NODES[1]);
   const [selectedPayload, setSelectedPayload] = useState(SIMULATION_PAYLOADS[0]);
   const [isSimulating, setIsSimulating] = useState(false);
   const [routedNodeId, setRoutedNodeId] = useState<string | null>(null);
-  const [telemetryLogs, setTelemetryLogs] = useState<string[]>([
-    "SYS_INIT: Multi-Drive Traffic Dispatcher online.",
-    "HEALTH: 3 cloud nodes registered via OAuth 2.0 PKCE.",
-    "READY: Listening for incoming streaming multipart payloads...",
-  ]);
 
   const timer1Ref = useRef<NodeJS.Timeout | null>(null);
   const timer2Ref = useRef<NodeJS.Timeout | null>(null);
@@ -136,13 +173,6 @@ export const VirtualCloudCore = memo(function VirtualCloudCore() {
     setIsSimulating(true);
     setRoutedNodeId(null);
 
-    const logPrefix = `[${new Date().toLocaleTimeString("en-US", { hour12: false })}]`;
-    setTelemetryLogs((prev) => [
-      `${logPrefix} INGEST: Incoming ${payload.name} (${payload.size}, ${payload.mime})`,
-      `${logPrefix} EVAL: Strategy [${activeStrategy.toUpperCase()}] assessing 3 Drive pools...`,
-      ...prev.slice(0, 4),
-    ]);
-
     timer1Ref.current = setTimeout(() => {
       let target: DriveNode;
 
@@ -151,30 +181,16 @@ export const VirtualCloudCore = memo(function VirtualCloudCore() {
         const primary = mockNodes[0];
         if (primary.used + payload.sizeGB > primary.total * 0.85) {
           target = mockNodes[1]; // spillover to secondary high-capacity node
-          setTelemetryLogs((prev) => [
-            `${logPrefix} SPILLOVER: Primary node at ${((primary.used / primary.total) * 100).toFixed(1)}% capacity. Safety threshold breached!`,
-            `${logPrefix} ROUTE: Overflow routed to high-capacity secondary node. Zero drop.`,
-            ...prev.slice(0, 4),
-          ]);
         } else {
           target = primary;
         }
       } else if (activeStrategy === "round-robin") {
         target = mockNodes[Math.floor(Math.random() * mockNodes.length)];
-        setTelemetryLogs((prev) => [
-          `${logPrefix} RATE_BALANCER: Dispatched to node [${target.email}] (QPS load: 1.2/10)`,
-          ...prev.slice(0, 4),
-        ]);
       } else {
         // best-fit: maximum available headroom
         target = mockNodes.reduce((prev, current) =>
           current.total - current.used > prev.total - prev.used ? current : prev
         );
-        setTelemetryLogs((prev) => [
-          `${logPrefix} BEST_FIT: Selected ${target.email} with ${((target.total - target.used) / 1024).toFixed(2)} TB free headroom.`,
-          `${logPrefix} PIPE: Direct in-memory stream active (0 bytes disk written).`,
-          ...prev.slice(0, 4),
-        ]);
       }
 
       setRoutedNodeId(target.id);
@@ -197,38 +213,38 @@ export const VirtualCloudCore = memo(function VirtualCloudCore() {
         <div className="flex items-center gap-2.5">
           <span className="size-2 rounded-full bg-emerald-500 shadow-xs shrink-0" />
           <div>
-            <span className="text-xs font-mono font-bold text-foreground tracking-wider uppercase">
-              Autonomous Traffic Dispatch Engine
+            <span className="text-xs font-bold text-foreground tracking-wide uppercase">
+              {t.vccSimHeader}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 text-[11px] font-mono text-muted-foreground">
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
             <Cpu className="size-3.5 text-primary" />
-            <span>Multi-Drive Pooling</span>
+            <span>{t.vccMultiAccountBadge}</span>
           </div>
           <span className="text-border">|</span>
           <span className="text-emerald-500 font-semibold flex items-center gap-1">
-            <CheckCircle2 className="size-3" /> Zero Server Caching
+            <CheckCircle2 className="size-3.5" /> {t.vccDirectBadge}
           </span>
         </div>
       </div>
 
-      {/* ── 1. Strategy Selector Tabs (Engineering Controls) ── */}
+      {/* ── 1. Strategy Selector Tabs ── */}
       <div className="space-y-3 mb-6 relative z-10">
         <div className="flex items-center justify-between text-xs">
-          <span className="font-mono font-semibold text-muted-foreground flex items-center gap-1.5">
+          <span className="font-semibold text-muted-foreground flex items-center gap-1.5">
             <SlidersHorizontal className="size-3.5 text-primary" />
-            Active Routing Strategy:
+            {t.vccStratSelectorLabel}
           </span>
-          <span className="text-[10px] font-mono text-primary font-medium">
-            Dynamic Heuristic Dispatcher
+          <span className="text-xs text-primary font-medium">
+            {t.vccStratSubLabel}
           </span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-          {ROUTING_STRATEGIES.map((strat) => {
+          {routingStrategies.map((strat) => {
             const isActive = activeStrategy === strat.id;
             return (
               <button
@@ -249,11 +265,11 @@ export const VirtualCloudCore = memo(function VirtualCloudCore() {
                   <span className={cn("text-xs font-bold", isActive ? "text-primary" : "text-foreground")}>
                     {strat.name}
                   </span>
-                  <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-secondary border border-border/80 text-muted-foreground">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary border border-border/80 text-muted-foreground">
                     {strat.tag}
                   </span>
                 </div>
-                <p className="text-[10.5px] text-muted-foreground leading-relaxed line-clamp-2">
+                <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
                   {strat.desc}
                 </p>
               </button>
@@ -392,17 +408,17 @@ export const VirtualCloudCore = memo(function VirtualCloudCore() {
         })}
       </div>
 
-      {/* ── 4. Interactive Ingestion Pipeline & Telemetry Console ── */}
+      {/* ── 4. Interactive Ingestion Pipeline & Visual Status Card ── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 relative z-10">
         {/* Left: Ingest Trigger Controls */}
         <div className="lg:col-span-5 rounded-2xl bg-secondary/50 border border-border/80 p-4 space-y-3.5 flex flex-col justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
               <Zap className="size-3.5 text-primary" />
-              <span>Test Streaming Payload Ingestion</span>
+              <span>{t.vccSimTestTitle}</span>
             </div>
-            <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Select a test file to trigger the heuristic router and observe direct in-memory stream allocation.
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {t.vccSimTestDesc}
             </p>
           </div>
 
@@ -419,7 +435,7 @@ export const VirtualCloudCore = memo(function VirtualCloudCore() {
                     executeRouting(payload);
                   }}
                   className={cn(
-                    "w-full px-3 py-2 rounded-xl border text-xs font-mono flex items-center justify-between transition-all cursor-pointer shadow-2xs",
+                    "w-full px-3 py-2.5 rounded-xl border text-xs flex items-center justify-between transition-all cursor-pointer shadow-2xs",
                     isSelected
                       ? "bg-primary/10 border-primary text-foreground font-semibold"
                       : "bg-card border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
@@ -429,7 +445,7 @@ export const VirtualCloudCore = memo(function VirtualCloudCore() {
                     <ArrowRight className="size-3 text-primary shrink-0" />
                     <span className="truncate">{payload.name}</span>
                   </div>
-                  <span className="text-[10px] font-semibold text-primary shrink-0">
+                  <span className="text-xs font-semibold text-primary shrink-0">
                     {payload.size}
                   </span>
                 </button>
@@ -446,50 +462,61 @@ export const VirtualCloudCore = memo(function VirtualCloudCore() {
             {isSimulating ? (
               <>
                 <RefreshCw className="size-3.5 animate-spin" />
-                <span>Routing Stream...</span>
+                <span>{t.vccSimBtnChecking}</span>
               </>
             ) : (
               <>
                 <Zap className="size-3.5" />
-                <span>Dispatch Active Payload</span>
+                <span>{t.vccSimBtnSubmit}</span>
               </>
             )}
           </button>
         </div>
 
-        {/* Right: Live Telemetry Terminal */}
-        <div className="lg:col-span-7 rounded-2xl bg-neutral-950 border border-neutral-800 p-4 font-mono text-[11px] flex flex-col justify-between shadow-inner min-h-[170px]">
-          <div>
-            <div className="flex items-center justify-between pb-2 mb-2 border-b border-neutral-800 text-neutral-400">
+        {/* Right: Human-Friendly Smart Decision Panel */}
+        <div className="lg:col-span-7 rounded-2xl bg-card border border-border p-5 flex flex-col justify-between shadow-sm min-h-[190px]">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between pb-3 border-b border-border/60">
               <div className="flex items-center gap-2">
-                <Terminal className="size-3.5 text-emerald-400" />
-                <span className="font-bold text-neutral-200">REALTIME DISPATCH TELEMETRY</span>
+                <CheckCircle2 className="size-4 text-emerald-500" />
+                <span className="font-bold text-xs text-foreground uppercase tracking-wider">{t.vccDecisionTitle}</span>
               </div>
-              <div className="flex items-center gap-1.5 text-[10px]">
-                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-emerald-400">PIPE ACTIVE</span>
-              </div>
+              <span className="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full font-medium">
+                {t.vccDecisionBadge}
+              </span>
             </div>
 
-            <div className="space-y-1.5 text-neutral-300">
-              {telemetryLogs.map((log, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    "transition-opacity font-mono leading-relaxed truncate",
-                    i === 0 ? "text-emerald-300 font-semibold" : "text-neutral-400"
-                  )}
-                >
-                  <span className="text-neutral-600 mr-1.5">&gt;</span>
-                  {log}
-                </div>
-              ))}
+            {/* Smart Decision Summary Box */}
+            <div className="p-3.5 rounded-xl bg-secondary/40 border border-border/70 space-y-2 text-xs">
+              <div className="flex items-start gap-2.5">
+                <div className="size-2 rounded-full bg-primary mt-1.5 shrink-0" />
+                <p className="text-muted-foreground leading-relaxed">
+                  <span className="font-semibold text-foreground">{t.vccDecisionFileLabel} </span>
+                  <span className="text-foreground">{selectedPayload.name}</span> ({selectedPayload.size})
+                </p>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <div className="size-2 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
+                <p className="text-muted-foreground leading-relaxed">
+                  <span className="font-semibold text-foreground">{t.vccDecisionTargetLabel} </span>
+                  {t.vccDecisionTargetPrefix} <span className="font-semibold text-emerald-600 dark:text-emerald-400">{selectedNode.email}</span> ({selectedNode.tier}) {t.vccDecisionTargetSuffix}
+                </p>
+              </div>
+
+              <div className="flex items-start gap-2.5">
+                <div className="size-2 rounded-full bg-sky-500 mt-1.5 shrink-0" />
+                <p className="text-muted-foreground leading-relaxed">
+                  <span className="font-semibold text-foreground">{t.vccDecisionPrivacyLabel} </span>
+                  {t.vccDecisionPrivacyText}
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="pt-2.5 mt-2 border-t border-neutral-800/80 flex items-center justify-between text-[10px] text-neutral-500">
-            <span>Buffer: 0 Bytes (Direct Stream)</span>
-            <span>Target: {selectedNode.email}</span>
+          <div className="pt-3 border-t border-border/60 flex items-center justify-between text-xs text-muted-foreground">
+            <span>{t.vccDecisionProxyNone}</span>
+            <span>{t.vccDecisionStatusReady}</span>
           </div>
         </div>
       </div>

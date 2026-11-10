@@ -42,27 +42,27 @@ export const BentoFeatures = memo(function BentoFeatures() {
     () => [
       {
         icon: FileArchive,
-        name: "Client_Design_Sprint_2026.fig",
-        size: "42.8 MB",
-        drive: "Secondary Storage Node (2 TB)",
+        name: "Laporan_Keuangan_dan_Pajak_2026.xlsx",
+        size: "4.2 MB",
+        drive: t.bentoDriveWork,
         color: "text-indigo-500",
       },
       {
         icon: ImageIcon,
-        name: "Render_Hero_Atmosphere_4K.exr",
-        size: "1.2 GB",
-        drive: "Archive Storage Node (100 GB)",
+        name: "Dokumentasi_Video_Wisuda_4K.mp4",
+        size: "1.8 GB",
+        drive: t.bentoDriveVault,
         color: "text-sky-500",
       },
       {
         icon: FileCode,
-        name: "skydrive-core-engine.tar.gz",
-        size: "8.4 MB",
-        drive: "Primary Storage Node (15 GB)",
+        name: "Materi_Presentasi_Project_Final.pdf",
+        size: "12.5 MB",
+        drive: t.bentoDrivePrimary,
         color: "text-emerald-500",
       },
     ],
-    []
+    [t]
   );
 
   return (
@@ -156,7 +156,7 @@ export const BentoFeatures = memo(function BentoFeatures() {
           {/* Friendly Storage Capacity & Sync Widget */}
           <div className="p-4 rounded-2xl bg-secondary/30 border border-border/60 backdrop-blur-sm space-y-3 mt-auto">
             <div className="flex justify-between items-center text-xs">
-              <span className="text-muted-foreground font-medium">Status Akun:</span>
+              <span className="text-muted-foreground font-medium">{t.bentoStatusLabel}</span>
               <span className="text-emerald-500 font-semibold flex items-center gap-1.5">
                 <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
                 {t.bento3SyncHealth}
@@ -165,15 +165,15 @@ export const BentoFeatures = memo(function BentoFeatures() {
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>{t.bento3Throughput} 14.2 GB / 45 GB</span>
-                <span className="text-foreground font-semibold">30.8 GB Sisa</span>
+                <span className="text-foreground font-semibold">30.8 GB {t.bentoRemainingLabel}</span>
               </div>
               <div className="h-2.5 rounded-full bg-muted/80 overflow-hidden">
                 <div className="h-full bg-gradient-to-r from-sky-500 via-blue-500 to-primary w-[32%] rounded-full" />
               </div>
             </div>
             <div className="text-[11px] text-muted-foreground flex items-center justify-between pt-1.5 border-t border-border/40">
-              <span>3 Akun Terhubung</span>
-              <span className="text-emerald-500 font-medium">Kapasitas Aman</span>
+              <span>{t.bentoAccountsConnected}</span>
+              <span className="text-emerald-500 font-medium">{t.bentoCapacitySafe}</span>
             </div>
           </div>
         </SpotlightCard>
