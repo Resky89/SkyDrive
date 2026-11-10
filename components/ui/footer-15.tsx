@@ -92,8 +92,8 @@ export function SkyDriveFooter({
       id: "legal",
       title: t.footerColLegal,
       links: [
-        { id: "privacy", label: t.footerLinkPrivacy, href: "#" },
-        { id: "terms", label: t.footerLinkTerms, href: "#" },
+        { id: "privacy", label: t.footerLinkPrivacy, href: "/privacy" },
+        { id: "terms", label: t.footerLinkTerms, href: "/terms" },
       ],
     },
   ];
