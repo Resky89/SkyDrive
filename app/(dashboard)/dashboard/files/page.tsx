@@ -11,6 +11,7 @@ import {
   Home,
   Users2,
   HardDrive,
+  Layers,
 } from "lucide-react";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { Button } from "@/components/ui/button";
@@ -35,9 +36,9 @@ import { MarqueeOverlay } from "@/components/dashboard/files/marquee-overlay";
 
 export default function FileExplorerPage() {
   // Navigation & Scope
-  const [scope, setScope] = useState<"mydrive" | "sharedWithMe">("mydrive");
+  const [scope, setScope] = useState<"all" | "mydrive" | "sharedWithMe">("all");
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([
-    { id: "root", name: "Drive Saya" },
+    { id: "root", name: "Semua File & Dibagikan" },
   ]);
   const currentFolderId = breadcrumbs[breadcrumbs.length - 1]?.id || "root";
 
@@ -206,12 +207,16 @@ export default function FileExplorerPage() {
     setBreadcrumbs((prev) => prev.slice(0, index + 1));
   };
 
-  const handleSwitchScope = (newScope: "mydrive" | "sharedWithMe") => {
+  const handleSwitchScope = (newScope: "all" | "mydrive" | "sharedWithMe") => {
     if (scope === newScope) return;
     setScope(newScope);
-    setBreadcrumbs([
-      { id: "root", name: newScope === "mydrive" ? "Drive Saya" : "Dibagikan kepada saya" },
-    ]);
+    const rootName =
+      newScope === "all"
+        ? "Semua File & Dibagikan"
+        : newScope === "mydrive"
+        ? "Drive Saya"
+        : "Dibagikan kepada saya";
+    setBreadcrumbs([{ id: "root", name: rootName }]);
   };
 
   // Upload Handlers
@@ -413,12 +418,29 @@ export default function FileExplorerPage() {
         {/* Top Header Controls Bar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           {/* Drive Scope Switcher */}
-          <div className="flex items-center gap-1.5 p-1 bg-muted/60 border border-border rounded-xl">
+          <div className="flex items-center gap-1 p-1 bg-muted/60 border border-border rounded-xl">
+            <button
+              type="button"
+              onClick={() => handleSwitchScope("all")}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                scope === "all"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Layers className="size-3.5 text-indigo-500" />
+              <span>Semua</span>
+            </button>
+
+            {/* Divider */}
+            <div className="w-px h-5 bg-border/80 shrink-0" />
+
             <button
               type="button"
               onClick={() => handleSwitchScope("mydrive")}
               className={cn(
-                "flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
                 scope === "mydrive"
                   ? "bg-card text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
@@ -431,14 +453,14 @@ export default function FileExplorerPage() {
               type="button"
               onClick={() => handleSwitchScope("sharedWithMe")}
               className={cn(
-                "flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
                 scope === "sharedWithMe"
                   ? "bg-card text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
               <Users2 className="size-3.5 text-blue-500" />
-              <span>Dibagikan kepada saya</span>
+              <span>Dibagikan ke Saya</span>
             </button>
           </div>
 

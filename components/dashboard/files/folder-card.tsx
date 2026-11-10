@@ -100,16 +100,25 @@ export const FolderCard = memo(function FolderCard({
           )}
         </button>
         <div className="flex flex-col min-w-0 pointer-events-none">
-          <span
-            className={cn(
-              "text-xs truncate transition-colors",
-              isSelected ? "text-primary font-bold" : "text-foreground font-semibold group-hover:text-primary"
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span
+              className={cn(
+                "text-xs truncate transition-colors",
+                isSelected ? "text-primary font-bold" : "text-foreground font-semibold group-hover:text-primary"
+              )}
+            >
+              {folder.name}
+            </span>
+            {folder.isShared && (
+              <span className="text-[9px] font-medium text-blue-600 dark:text-blue-400 shrink-0">
+                · Dibagikan
+              </span>
             )}
-          >
-            {folder.name}
-          </span>
+          </div>
           <span className="text-[10px] text-muted-foreground font-mono truncate">
-            {folder.account.email}
+            {folder.isShared && folder.sharedBy
+              ? `${folder.sharedBy} → ${folder.account.email}`
+              : folder.account.email}
           </span>
         </div>
       </div>

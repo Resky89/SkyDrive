@@ -11,7 +11,6 @@ import {
   FileArchive,
   Image as ImageIcon,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
 import { useLanguage } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -45,21 +44,21 @@ export const BentoFeatures = memo(function BentoFeatures() {
         icon: FileArchive,
         name: "Client_Design_Sprint_2026.fig",
         size: "42.8 MB",
-        drive: "Workspace Drive (2 TB)",
+        drive: "Secondary Storage Node (2 TB)",
         color: "text-indigo-500",
       },
       {
         icon: ImageIcon,
         name: "Render_Hero_Atmosphere_4K.exr",
         size: "1.2 GB",
-        drive: "Media Vault Drive (100 GB)",
+        drive: "Archive Storage Node (100 GB)",
         color: "text-sky-500",
       },
       {
         icon: FileCode,
         name: "skydrive-core-engine.tar.gz",
         size: "8.4 MB",
-        drive: "Personal Drive (15 GB)",
+        drive: "Primary Storage Node (15 GB)",
         color: "text-emerald-500",
       },
     ],
@@ -77,9 +76,6 @@ export const BentoFeatures = memo(function BentoFeatures() {
               <div className="size-10 rounded-2xl bg-gradient-to-br from-sky-500/20 to-blue-600/20 border border-primary/30 flex items-center justify-center text-primary shadow-inner">
                 <Zap className="size-5" />
               </div>
-              <Badge variant="outline" className="text-[10px] font-mono border-primary/30 text-primary bg-primary/5">
-                {t.bento1Tag}
-              </Badge>
             </div>
             <h3 className="text-[length:var(--text-xl)] sm:text-[length:var(--text-2xl)] font-bold text-foreground">
               {t.bento1Title}
@@ -157,23 +153,27 @@ export const BentoFeatures = memo(function BentoFeatures() {
             </p>
           </div>
 
-          {/* Telemetry preview widget */}
-          <div className="p-4 rounded-2xl bg-secondary/25 border border-border/40 backdrop-blur-sm space-y-3 mt-auto">
-            <div className="flex justify-between items-center text-[11px] font-mono">
-              <span className="text-muted-foreground">Status:</span>
+          {/* Friendly Storage Capacity & Sync Widget */}
+          <div className="p-4 rounded-2xl bg-secondary/30 border border-border/60 backdrop-blur-sm space-y-3 mt-auto">
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-muted-foreground font-medium">Status Akun:</span>
               <span className="text-emerald-500 font-semibold flex items-center gap-1.5">
-                <span className="size-2 rounded-full bg-emerald-500" />
+                <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
                 {t.bento3SyncHealth}
               </span>
             </div>
             <div className="space-y-1.5">
-              <div className="flex justify-between text-[10px] font-mono text-muted-foreground">
-                <span>{t.bento3Throughput}</span>
-                <span className="text-foreground font-semibold">148.6 MB/s</span>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{t.bento3Throughput} 14.2 GB / 45 GB</span>
+                <span className="text-foreground font-semibold">30.8 GB Sisa</span>
               </div>
-              <div className="h-2 rounded-full bg-muted/70 overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-600 w-4/5 rounded-full" />
+              <div className="h-2.5 rounded-full bg-muted/80 overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-sky-500 via-blue-500 to-primary w-[32%] rounded-full" />
               </div>
+            </div>
+            <div className="text-[11px] text-muted-foreground flex items-center justify-between pt-1.5 border-t border-border/40">
+              <span>3 Akun Terhubung</span>
+              <span className="text-emerald-500 font-medium">Kapasitas Aman</span>
             </div>
           </div>
         </SpotlightCard>
@@ -185,9 +185,6 @@ export const BentoFeatures = memo(function BentoFeatures() {
               <div className="size-10 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-sky-600/20 border border-primary/30 flex items-center justify-center text-primary shadow-inner">
                 <FolderOpen className="size-5" />
               </div>
-              <Badge variant="outline" className="text-[10px] font-mono border-primary/30 text-primary bg-primary/5">
-                {t.bento4Tag}
-              </Badge>
             </div>
             <h3 className="text-[length:var(--text-xl)] sm:text-[length:var(--text-2xl)] font-bold text-foreground">
               {t.bento4Title}

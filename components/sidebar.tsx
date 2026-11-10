@@ -20,7 +20,6 @@ import {
 import { signOut, useSession } from "@/lib/auth-client";
 import { cn, getInitials, formatBytes } from "@/lib/utils";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useLanguage } from "@/lib/i18n";
@@ -166,17 +165,9 @@ export const Sidebar = memo(function Sidebar() {
             />
           </div>
           <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-sm brand-text-gradient">
-                SkyDrive
-              </span>
-              <Badge
-                variant="outline"
-                className="px-1 py-0 text-[9px] font-mono border-primary/30 text-primary bg-primary/5"
-              >
-                v1.0
-              </Badge>
-            </div>
+            <span className="font-bold text-sm brand-text-gradient">
+              SkyDrive
+            </span>
             <span className="text-[10px] text-muted-foreground truncate font-mono">
               Multi-Drive Pool
             </span>

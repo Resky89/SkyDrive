@@ -13,6 +13,10 @@ import {
   Image as ImageIcon,
   Video,
   Archive,
+  User,
+  Cloud,
+  Check,
+  X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -61,8 +65,83 @@ export function FileFilterBar({
   onViewModeChange,
   accounts,
 }: FileFilterBarProps) {
+  const selectedAccount = accounts.find((a) => a.id === selectedAccountId);
+
   return (
     <div className="space-y-3">
+      {/* Account Source Switcher Pills */}
+      {accounts.length > 0 && (
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none pt-0.5">
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider shrink-0 mr-1 hidden sm:inline">
+            Sumber Akun:
+          </span>
+
+          {/* All Accounts Button */}
+          <button
+            type="button"
+            onClick={() => onAccountIdChange("")}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 cursor-pointer border",
+              !selectedAccountId
+                ? "bg-primary text-primary-foreground border-primary shadow-xs font-semibold"
+                : "bg-card border-border text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+            )}
+          >
+            <Layers className="size-3.5" />
+            <span>Semua Akun ({accounts.length})</span>
+          </button>
+
+          {/* Individual Account Buttons */}
+          {accounts.map((acc) => {
+            const isSelected = selectedAccountId === acc.id;
+            return (
+              <button
+                key={acc.id}
+                type="button"
+                onClick={() => onAccountIdChange(acc.id)}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 cursor-pointer border group",
+                  isSelected
+                    ? "bg-primary text-primary-foreground border-primary shadow-xs font-semibold"
+                    : "bg-card border-border text-muted-foreground hover:text-foreground hover:bg-secondary/60"
+                )}
+                title={acc.email}
+              >
+                {acc.isLoginAccount ? (
+                  <User className={cn("size-3.5", isSelected ? "text-primary-foreground" : "text-sky-500")} />
+                ) : (
+                  <Cloud className={cn("size-3.5", isSelected ? "text-primary-foreground" : "text-emerald-500")} />
+                )}
+                <span className="max-w-[130px] truncate">{acc.email.split("@")[0]}</span>
+                {acc.isLoginAccount ? (
+                  <span
+                    className={cn(
+                      "text-[9px] px-1.5 py-0.2 rounded-md font-mono uppercase font-bold",
+                      isSelected
+                        ? "bg-primary-foreground/20 text-primary-foreground"
+                        : "bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30"
+                    )}
+                  >
+                    Login
+                  </span>
+                ) : (
+                  <span
+                    className={cn(
+                      "text-[9px] px-1.5 py-0.2 rounded-md font-mono uppercase font-bold",
+                      isSelected
+                        ? "bg-primary-foreground/20 text-primary-foreground"
+                        : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                    )}
+                  >
+                    Drive
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Top Controls: Search, Select Filters, View Mode Toggle */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
         {/* Search Bar */}
@@ -83,11 +162,12 @@ export function FileFilterBar({
           <select
             value={selectedAccountId}
             onChange={(e) => onAccountIdChange(e.target.value)}
-            className="h-9 rounded-xl border border-input bg-card px-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer"
+            className="h-9 rounded-xl border border-input bg-card px-2.5 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer max-w-[180px] sm:max-w-[220px] truncate"
           >
-            <option value="">Semua Storage Pool</option>
+            <option value="">Semua Akun ({accounts.length})</option>
             {accounts.map((acc) => (
               <option key={acc.id} value={acc.id}>
+                {acc.isLoginAccount ? "👤 Login: " : "☁️ Drive: "}
                 {acc.email}
               </option>
             ))}
@@ -175,6 +255,28 @@ export function FileFilterBar({
           );
         })}
       </div>
+
+      {/* Active Account Filter Chip / Reset Banner */}
+      {selectedAccount && (
+        <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-primary/10 border border-primary/25 text-xs text-primary">
+          <div className="flex items-center gap-2">
+            {selectedAccount.isLoginAccount ? <User className="size-3.5" /> : <Cloud className="size-3.5" />}
+            <span>
+              Menampilkan file dari:{" "}
+              <strong className="text-foreground">{selectedAccount.email}</strong>{" "}
+              ({selectedAccount.isLoginAccount ? "Akun Login Utama" : "Akun Tambahan"})
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onAccountIdChange("")}
+            className="flex items-center gap-1 text-[11px] font-semibold hover:underline cursor-pointer"
+          >
+            <span>Tampilkan Semua Akun</span>
+            <X className="size-3" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

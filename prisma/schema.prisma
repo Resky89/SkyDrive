@@ -20,9 +20,6 @@ model User {
   sessions         Session[]
   accounts         Account[]
   storageAccounts  StorageAccount[]
-  files            File[]
-  folders          Folder[]
-  uploads          Upload[]
   storageStrategies StorageStrategy[]
   activityLogs     ActivityLog[]
 
@@ -97,74 +94,11 @@ model StorageAccount {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  files            File[]
-  folders          Folder[]
-  uploads          Upload[]
   storageAnalytics StorageAnalytics[]
   activityLogs     ActivityLog[]
 
   @@unique([userId, email])
   @@map("storage_accounts")
-}
-
-model File {
-  id               String         @id @default(cuid())
-  userId           String
-  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  storageAccountId String
-  storageAccount   StorageAccount @relation(fields: [storageAccountId], references: [id], onDelete: Cascade)
-  providerFileId   String
-  name             String
-  mimeType         String?
-  size             BigInt         @default(0)
-  parentProviderId String?
-  webViewLink      String?        @db.Text
-  thumbnailLink    String?        @db.Text
-  status           String         @default("active")
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-
-  uploads Upload[]
-
-  @@unique([storageAccountId, providerFileId])
-  @@map("files")
-}
-
-model Folder {
-  id               String         @id @default(cuid())
-  userId           String
-  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  storageAccountId String
-  storageAccount   StorageAccount @relation(fields: [storageAccountId], references: [id], onDelete: Cascade)
-  providerFolderId String
-  name             String
-  parentFolderId   String?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-
-  @@unique([storageAccountId, providerFolderId])
-  @@map("folders")
-}
-
-model Upload {
-  id               String         @id @default(cuid())
-  userId           String
-  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  storageAccountId String
-  storageAccount   StorageAccount @relation(fields: [storageAccountId], references: [id], onDelete: Cascade)
-  fileId           String?
-  file             File?          @relation(fields: [fileId], references: [id])
-  originalFilename String
-  fileSize         BigInt
-  mimeType         String?
-  uploadStrategy   String         @default("manual")
-  status           String         @default("pending")
-  errorMessage     String?        @db.Text
-  startedAt        DateTime?
-  completedAt      DateTime?
-  createdAt        DateTime       @default(now())
-
-  @@map("uploads")
 }
 
 model StorageStrategy {

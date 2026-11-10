@@ -41,7 +41,6 @@ export default function ConnectedAccountsPage() {
   const [loading, setLoading] = useState(true);
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
-  const [expiredAccountIds, setExpiredAccountIds] = useState<Set<string>>(new Set());
 
   const fetchAccounts = useCallback(async () => {
     try {
@@ -92,7 +91,6 @@ export default function ConnectedAccountsPage() {
 
   const handleSyncAccount = async (id: string) => {
     setSyncingId(id);
-    const targetAccount = accounts.find((a) => a.id === id);
     try {
       const res = await fetch("/api/google/sync", {
         method: "POST",
@@ -101,42 +99,13 @@ export default function ConnectedAccountsPage() {
       });
       const data = await res.json().catch(() => null);
       if (res.ok && data?.success && (data.count > 0 || !data.error)) {
-        toast.success("Account quota synchronized successfully");
-        setExpiredAccountIds((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
+        toast.success("Akun berhasil disinkronkan!");
         await fetchAccounts();
         window.dispatchEvent(new CustomEvent("skydrive:refresh"));
       } else {
-        const isInvalidGrant =
-          Boolean(data?.isInvalidGrant) ||
-          Boolean(data?.error?.includes("invalid_grant"));
-
-        if (isInvalidGrant) {
-          setExpiredAccountIds((prev) => new Set(prev).add(id));
-          const reconnectUrl = `/api/google/connect${
-            targetAccount?.email ? `?email=${encodeURIComponent(targetAccount.email)}` : ""
-          }`;
-
-          toast.error(
-            "Token Google Drive telah kadaluarsa (invalid_grant). Klik Sambungkan Ulang tanpa perlu login ulang aplikasi.",
-            {
-              duration: 10000,
-              action: {
-                label: t.accountsReconnect || "Sambungkan Ulang",
-                onClick: () => {
-                  window.location.href = reconnectUrl;
-                },
-              },
-            }
-          );
-        } else {
-          const errorMsg =
-            data?.error || "Gagal sinkronisasi akun. Token mungkin telah kadaluarsa atau dicabut.";
-          toast.error(errorMsg);
-        }
+        const errorMsg =
+          data?.error || "Gagal sinkronisasi akun. Silakan coba lagi.";
+        toast.error(errorMsg);
         await fetchAccounts();
         window.dispatchEvent(new CustomEvent("skydrive:refresh"));
       }
@@ -314,9 +283,7 @@ export default function ConnectedAccountsPage() {
 
                     <Badge
                       variant={
-                        expiredAccountIds.has(acc.id)
-                          ? "destructive"
-                          : total === 0
+                        total === 0
                           ? "secondary"
                           : isWarning
                           ? "destructive"
@@ -326,9 +293,7 @@ export default function ConnectedAccountsPage() {
                       }
                       className="text-[10px] font-mono font-semibold"
                     >
-                      {expiredAccountIds.has(acc.id)
-                        ? "TOKEN EXPIRED"
-                        : total === 0
+                      {total === 0
                         ? "UNSYNCED"
                         : pct > 0
                         ? `${pct < 1 ? pct.toFixed(2) : pct.toFixed(1)}% USED`
@@ -368,26 +333,6 @@ export default function ConnectedAccountsPage() {
                     </div>
                   )}
 
-                  {/* Expired Token Callout */}
-                  {expiredAccountIds.has(acc.id) && (
-                    <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between gap-2 text-xs text-amber-600 dark:text-amber-400">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="size-3.5 shrink-0" />
-                        <span>{t.accountsTokenExpiredDesc}</span>
-                      </div>
-                      <Button
-                        asChild
-                        size="sm"
-                        className="gap-1.5 text-xs h-7 px-2.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white shrink-0 font-medium"
-                      >
-                        <Link href={`/api/google/connect?email=${encodeURIComponent(acc.email)}`}>
-                          <RefreshCw className="size-3" />
-                          <span>{t.accountsReconnect}</span>
-                        </Link>
-                      </Button>
-                    </div>
-                  )}
-
                   {/* Actions */}
                   <div className="flex items-center justify-between pt-3 border-t border-border/70 text-xs relative z-10 mt-auto">
                     <span className="text-[10px] font-mono text-muted-foreground">
@@ -396,27 +341,11 @@ export default function ConnectedAccountsPage() {
 
                     <div className="flex items-center gap-2">
                       <Button
-                        asChild
-                        size="sm"
-                        className={cn(
-                          "gap-1.5 text-xs h-7.5 px-3 rounded-xl font-medium",
-                          expiredAccountIds.has(acc.id) || total === 0
-                            ? "bg-amber-500 hover:bg-amber-600 text-white shadow-xs"
-                            : "border border-border/80 bg-secondary/50 hover:bg-secondary text-foreground"
-                        )}
-                      >
-                        <Link href={`/api/google/connect?email=${encodeURIComponent(acc.email)}`}>
-                          <RefreshCw className="size-3" />
-                          <span>{t.accountsReconnect}</span>
-                        </Link>
-                      </Button>
-
-                      <Button
                         variant="outline"
                         size="sm"
                         onClick={() => handleSyncAccount(acc.id)}
                         disabled={syncingId === acc.id}
-                        className="gap-1.5 text-xs h-7.5 px-3 rounded-xl"
+                        className="gap-1.5 text-xs h-7.5 px-3 rounded-xl border border-border/80 bg-secondary/50 hover:bg-secondary text-foreground"
                       >
                         <RefreshCw
                           className={cn(

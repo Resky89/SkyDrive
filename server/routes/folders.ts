@@ -138,28 +138,15 @@ export const foldersRouter = new Hono<Env>()
           throw new Error("Failed to create folder on Google Drive");
         }
 
-        // Save to database
-        const savedFolder = await db.file.create({
-          data: {
-            userId: user.id,
-            storageAccountId: targetAccount.id,
-            providerFileId: driveFolder.id,
-            name: driveFolder.name ?? name.trim(),
-            mimeType: "application/vnd.google-apps.folder",
-            size: BigInt(0),
-            parentProviderId: parentFolderId || null,
-            webViewLink: driveFolder.webViewLink,
-            status: "active",
-          },
-        });
-
         return c.json({
           success: true,
           folder: {
-            id: savedFolder.id,
-            name: savedFolder.name,
-            driveFileId: savedFolder.providerFileId,
-            mimeType: savedFolder.mimeType,
+            id: driveFolder.id,
+            name: driveFolder.name ?? name.trim(),
+            driveFileId: driveFolder.id,
+            mimeType: "application/vnd.google-apps.folder",
+            parentFolderId: parentFolderId || null,
+            webViewLink: driveFolder.webViewLink,
             account: {
               id: targetAccount.id,
               email: targetAccount.email,

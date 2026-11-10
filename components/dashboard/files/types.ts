@@ -14,6 +14,8 @@ export interface CloudItem {
   webViewLink?: string;
   thumbnailLink?: string | null;
   iconLink?: string | null;
+  isShared?: boolean;
+  sharedBy?: string | null;
   account: {
     id: string;
     email: string;
@@ -24,8 +26,10 @@ export interface CloudItem {
 export interface StorageAccountSummary {
   id: string;
   email: string;
+  displayName?: string | null;
   availableStorage: string;
   usagePercentage: number;
+  isLoginAccount?: boolean;
 }
 
 export interface BreadcrumbItem {

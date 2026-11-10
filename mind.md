@@ -1,6 +1,6 @@
 # ☁️ SkyDrive
 
-> **One workspace. Multiple clouds. Smarter storage.**
+> **One workspace. All your Google Drives. Smarter storage.**
 
 SkyDrive is a unified cloud storage management platform that allows users to connect and manage multiple cloud storage accounts from a single dashboard.
 
@@ -48,10 +48,10 @@ Many users have more than one Google account for different purposes.
 For example:
 
 ```text
-personal@gmail.com
-college@gmail.com
-work@gmail.com
-backup@gmail.com
+account1@gmail.com
+account2@gmail.com
+account3@gmail.com
+archive@gmail.com
 ```
 
 Each account has its own Google Drive storage.
@@ -93,25 +93,25 @@ Cloud storage users often create multiple accounts because one storage account i
 For example:
 
 ```text
-Personal Account
+Account 1 (Primary)
 
 Storage:
 15 GB
 
 
-College Account
+Account 2 (Secondary)
 
 Storage:
 15 GB
 
 
-Work Account
+Account 3 (Workspace)
 
 Storage:
 15 GB
 
 
-Backup Account
+Archive Account
 
 Storage:
 15 GB
@@ -186,13 +186,13 @@ Users may forget where a file is stored.
 Example:
 
 ```text
-Where is my thesis backup?
+Where is my project archive?
 
-Personal Drive?
+Account 1?
 
-College Drive?
+Account 2?
 
-Backup Drive?
+Archive Drive?
 
 External Storage?
 ```
@@ -275,46 +275,37 @@ The system aims to:
 
 # 👥 Target Users
 
-SkyDrive can be useful for:
+SkyDrive is engineered for:
 
-## Students
+## Software Engineers & Cloud Architects
 
-Students often have multiple accounts for:
+Engineers managing multiple Google accounts for:
 
-* Personal files
-* Academic documents
-* Assignments
-* Research data
-* Thesis backups
-
----
-
-## Developers
-
-Developers may use multiple accounts for:
-
-* Project backups
-* Source files
-* Documentation
-* Dataset storage
-* Personal projects
+* Repository asset & binary backups
+* Environment dumps & database snapshots
+* Machine learning datasets & model checkpoints
+* Build artifacts and distribution packages
 
 ---
 
-## Freelancers
+## Media Studios & Creative Directors
 
-Freelancers may separate storage between:
+Creative teams managing high-volume cloud storage for:
 
-* Personal projects
-* Client files
-* Work documents
-* Backups
+* RAW video footage and 4K production masters
+* Project deliverables and client assets
+* Large format graphic design archives
+* Long-term redundant backups
 
 ---
 
-## General Users
+## Multi-Account Cloud Power Users
 
-Anyone who owns multiple Google accounts and wants centralized storage management.
+Professionals and organizations requiring:
+
+* Segregated workspaces per project domain
+* Pooled capacity aggregation without extra storage subscription costs
+* Centralized search and file management across distributed drives
 
 ---
 
@@ -329,13 +320,13 @@ Example:
 ```text
 Connected Accounts
 
-├── personal@gmail.com
+├── account1@gmail.com
 │
-├── college@gmail.com
+├── account2@gmail.com
 │
-├── work@gmail.com
+├── account3@gmail.com
 │
-└── backup@gmail.com
+└── archive@gmail.com
 ```
 
 Each account is connected using Google OAuth 2.0.
@@ -400,13 +391,13 @@ Per account:
 ```text
 Account                 Used          Available
 
-personal@gmail.com      12 GB         3 GB
+account1@gmail.com      12 GB         3 GB
 
-college@gmail.com       10 GB         5 GB
+account2@gmail.com      10 GB         5 GB
 
-work@gmail.com          18 GB         2 GB
+account3@gmail.com      18 GB         2 GB
 
-backup@gmail.com         2 GB        13 GB
+archive@gmail.com        2 GB        13 GB
 ```
 
 ---
@@ -418,14 +409,14 @@ Users can view storage usage visually.
 Example:
 
 ```text
-personal@gmail.com
+account1@gmail.com
 
 ████████████████░░░░
 
 80% Used
 
 
-backup@gmail.com
+archive@gmail.com
 
 ████░░░░░░░░░░░░░░
 
@@ -520,22 +511,22 @@ Example:
 All Files
 
 
-📄 Thesis.pdf
+📄 Report.pdf
 
 Storage:
-college@gmail.com
+account2@gmail.com
 
 
 📄 Project.zip
 
 Storage:
-personal@gmail.com
+account1@gmail.com
 
 
 📄 Dataset.csv
 
 Storage:
-backup@gmail.com
+archive@gmail.com
 ```
 
 Users can identify which storage account contains each file.
@@ -559,16 +550,16 @@ The system searches every connected Google Drive account.
 Result:
 
 ```text
-Skripsi Final.pdf
+Report Final.pdf
 
 Account:
-college@gmail.com
+account2@gmail.com
 
 
-Skripsi Backup.pdf
+Report Backup.pdf
 
 Account:
-backup@gmail.com
+archive@gmail.com
 ```
 
 ---
@@ -649,7 +640,7 @@ Example:
 ```text
 ⚠ Storage Alert
 
-college@gmail.com
+account2@gmail.com
 
 Storage usage has reached:
 
@@ -763,11 +754,11 @@ Example:
 ```text
 Choose Account
 
-○ personal@gmail.com
+○ account1@gmail.com
 
-○ college@gmail.com
+○ account2@gmail.com
 
-● backup@gmail.com
+● archive@gmail.com
 ```
 
 ---
@@ -1979,21 +1970,19 @@ Storage Alerts
 
 # 🚀 Future Features
 
-## Multi Cloud Provider
+## Google Workspace & Shared Drives Expansion
 
 Future versions could support:
 
 ```text
-Google Drive
+Google Drive (Personal Accounts)
 
-Dropbox
+Google Workspace (Business & Enterprise)
 
-OneDrive
+Google Shared Drives (Team Drives)
 
-Cloudflare R2
-
-AWS S3
-```
+Google Education & Campus Drives
+`
 
 Architecture:
 
@@ -2006,7 +1995,7 @@ Architecture:
 
         ▼            ▼            ▼
 
-   Google Drive    Dropbox      OneDrive
+   Personal Drive  Workspace    Shared Drive
 ```
 
 ---
@@ -2099,7 +2088,7 @@ Academic Documents
 
 ↓
 
-College Account
+Secondary Account
 
 
 Project Files
@@ -2122,9 +2111,9 @@ project.zip
 
 Found in:
 
-personal@gmail.com
+account1@gmail.com
 
-backup@gmail.com
+archive@gmail.com
 ```
 
 Recommendation:
@@ -2329,28 +2318,24 @@ Unified Storage Management
 Future vision:
 
 ```text
-Google Drive
+Personal Google Drive
       │
-Dropbox
+Secondary Google Drive
       │
-OneDrive
-      │
-AWS S3
-      │
-Cloudflare R2
+Workspace / School Drive
       │
       ▼
   SkyDrive
       │
       ▼
-Unified Cloud Workspace
+Unified Storage Workspace
 ```
 
 ---
 
 # 👨‍💻 Author
 
-Developed as a personal portfolio project focused on:
+Engineered as a production-grade portfolio platform focused on:
 
 **Modern Full-Stack Development, Cloud Integration, OAuth Authentication, Multi-Account Management, and Intelligent Storage Management.**
 
@@ -2378,4 +2363,4 @@ Production
 
 ---
 
-> **SkyDrive — One workspace. Multiple clouds. Smarter storage.**
+> **SkyDrive — One workspace. All your Google Drives. Smarter storage.**

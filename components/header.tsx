@@ -68,9 +68,7 @@ export function Header({ accounts: initialAccounts, onRefresh }: HeaderProps) {
       if (res.ok && data?.success) {
         if (data.failedCount && data.failedCount > 0) {
           toast.warning(
-            `Synchronized ${data.count || 0} accounts (${data.failedCount} failed${
-              data.hasInvalidGrant ? " - token expired" : ""
-            }). Buka halaman Akun untuk sambungkan ulang.`,
+            `Synchronized ${data.count || 0} accounts (${data.failedCount} failed). Silakan sinkronkan ulang di halaman Akun.`,
             {
               action: {
                 label: "Buka Akun",

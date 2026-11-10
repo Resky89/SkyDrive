@@ -42,8 +42,23 @@ export async function getGoogleDriveClient(storageAccountId: string) {
   if (!account) throw new Error("Storage account not found");
 
   const oauth2Client = createOAuth2Client();
-  const accessToken = decrypt(account.accessTokenEnc);
-  const refreshToken = decrypt(account.refreshTokenEnc);
+  let accessToken = "";
+  try {
+    if (account.accessTokenEnc) {
+      accessToken = decrypt(account.accessTokenEnc);
+    }
+  } catch (e) {
+    console.warn("Failed to decrypt accessTokenEnc:", e);
+  }
+
+  let refreshToken = "";
+  try {
+    if (account.refreshTokenEnc) {
+      refreshToken = decrypt(account.refreshTokenEnc);
+    }
+  } catch (e) {
+    console.warn("Failed to decrypt refreshTokenEnc:", e);
+  }
 
   oauth2Client.setCredentials({
     access_token: accessToken,
@@ -51,7 +66,7 @@ export async function getGoogleDriveClient(storageAccountId: string) {
     expiry_date: account.tokenExpiresAt?.getTime(),
   });
 
-  // Auto-refresh token if expired
+  // Auto-refresh token listener when googleapis performs internal refresh
   oauth2Client.on("tokens", async (newTokens) => {
     if (newTokens.access_token) {
       const updateData: {
@@ -81,6 +96,82 @@ export async function getGoogleDriveClient(storageAccountId: string) {
   return google.drive({ version: "v3", auth: oauth2Client });
 }
 
+/**
+ * Explicitly refreshes the Google OAuth access token for a storage account.
+ * Triggered on-demand when the user clicks the "Sinkron" button.
+ */
+export async function refreshAccountAccessToken(storageAccountId: string): Promise<string> {
+  const account = await db.storageAccount.findUnique({
+    where: { id: storageAccountId },
+    include: {
+      user: {
+        include: {
+          accounts: {
+            where: { providerId: "google" },
+          },
+        },
+      },
+    },
+  });
+
+  if (!account) throw new Error("Storage account not found");
+
+  let refreshToken = "";
+  if (account.refreshTokenEnc) {
+    try {
+      refreshToken = decrypt(account.refreshTokenEnc);
+    } catch (e) {
+      console.warn("Failed to decrypt refreshTokenEnc:", e);
+    }
+  }
+
+  // Fallback to user's primary login account if storageAccount lacks refresh token
+  if (!refreshToken) {
+    const primaryGoogleAccount = account.user?.accounts?.[0];
+    if (primaryGoogleAccount?.refreshToken) {
+      refreshToken = primaryGoogleAccount.refreshToken;
+    }
+  }
+
+  if (!refreshToken) {
+    throw new Error(
+      "Refresh token tidak tersedia. Pastikan akun Google telah dihubungkan dengan izin offline."
+    );
+  }
+
+  const oauth2Client = createOAuth2Client();
+  oauth2Client.setCredentials({ refresh_token: refreshToken });
+
+  const { credentials } = await oauth2Client.refreshAccessToken();
+  if (!credentials.access_token) {
+    throw new Error("Gagal memperoleh access token baru dari Google.");
+  }
+
+  const updateData: {
+    accessTokenEnc: string;
+    refreshTokenEnc?: string;
+    tokenExpiresAt?: Date;
+  } = {
+    accessTokenEnc: encrypt(credentials.access_token),
+    tokenExpiresAt: credentials.expiry_date
+      ? new Date(credentials.expiry_date)
+      : new Date(Date.now() + 3600 * 1000),
+  };
+
+  if (credentials.refresh_token) {
+    updateData.refreshTokenEnc = encrypt(credentials.refresh_token);
+  } else if (!account.refreshTokenEnc && refreshToken) {
+    updateData.refreshTokenEnc = encrypt(refreshToken);
+  }
+
+  await db.storageAccount.update({
+    where: { id: storageAccountId },
+    data: updateData,
+  });
+
+  return credentials.access_token;
+}
+
 export function isInvalidGrantError(err: unknown): boolean {
   const e = err as {
     message?: string;
@@ -93,8 +184,17 @@ export function isInvalidGrantError(err: unknown): boolean {
   );
 }
 
-export async function getStorageQuota(storageAccountId: string) {
+export async function getStorageQuota(
+  storageAccountId: string,
+  options?: { forceRefresh?: boolean }
+) {
   try {
+    if (options?.forceRefresh) {
+      await refreshAccountAccessToken(storageAccountId).catch((refreshErr) => {
+        console.warn("On-demand token refresh before quota fetch:", refreshErr);
+      });
+    }
+
     const drive = await getGoogleDriveClient(storageAccountId);
     const { data } = await drive.about.get({
       fields: "storageQuota,user",
@@ -124,9 +224,49 @@ export async function getStorageQuota(storageAccountId: string) {
       user: data.user,
     };
   } catch (err) {
+    // If getting quota failed due to token issues and forceRefresh was not already run, retry with refresh
+    if (!options?.forceRefresh && isInvalidGrantError(err)) {
+      try {
+        await refreshAccountAccessToken(storageAccountId);
+        const retryDrive = await getGoogleDriveClient(storageAccountId);
+        const { data: retryData } = await retryDrive.about.get({
+          fields: "storageQuota,user",
+        });
+        const quota = retryData.storageQuota;
+        const rawLimit = quota?.limit ? BigInt(quota.limit) : BigInt(0);
+        const rawUsed = quota?.usageInDrive
+          ? BigInt(quota.usageInDrive)
+          : quota?.usage
+          ? BigInt(quota.usage)
+          : BigInt(0);
+        const total = rawLimit;
+        const used = rawUsed;
+        const available = total >= used ? total - used : BigInt(0);
+        const percentage =
+          total > BigInt(0)
+            ? Math.min((Number(used) / Number(total)) * 100, 100)
+            : 0;
+
+        return {
+          total,
+          used,
+          available,
+          percentage,
+          user: retryData.user,
+        };
+      } catch (retryErr) {
+        if (isInvalidGrantError(retryErr)) {
+          throw new Error(
+            "Token Google Drive telah kadaluarsa (invalid_grant). Pastikan project Google Cloud Console telah disetel ke 'In production' (Publish App), lalu sambungkan ulang akun sekali untuk mendapatkan token permanen."
+          );
+        }
+        throw retryErr;
+      }
+    }
+
     if (isInvalidGrantError(err)) {
       throw new Error(
-        "Token Google Drive telah kadaluarsa atau dicabut (invalid_grant). Silakan sambungkan ulang akun ini."
+        "Token Google Drive telah kadaluarsa (invalid_grant). Pastikan project Google Cloud Console telah disetel ke 'In production' (Publish App), lalu sambungkan ulang akun sekali untuk mendapatkan token permanen."
       );
     }
     throw err;
@@ -140,20 +280,23 @@ export async function listFiles(
     pageSize?: number;
     pageToken?: string;
     folderId?: string;
-    scope?: "mydrive" | "sharedWithMe";
+    scope?: "all" | "mydrive" | "sharedWithMe";
   } = {}
 ) {
   try {
     const drive = await getGoogleDriveClient(storageAccountId);
-    const { query, pageSize = 50, pageToken, folderId, scope = "mydrive" } = options;
+    const { query, pageSize = 50, pageToken, folderId, scope = "all" } = options;
 
     let q = "trashed = false";
     if (folderId && folderId !== "root") {
       q += ` and '${folderId}' in parents`;
     } else if (scope === "sharedWithMe") {
       q += " and sharedWithMe = true";
-    } else {
+    } else if (scope === "mydrive") {
       q += " and 'root' in parents";
+    } else {
+      // Default "all": Tampilkan file di root akun sendiri ATAU file yang dibagikan oleh siapa pun ke akun ini
+      q += " and ('root' in parents or sharedWithMe = true)";
     }
 
     if (query) {
@@ -168,7 +311,7 @@ export async function listFiles(
       includeItemsFromAllDrives: true,
       orderBy: "folder,name",
       fields:
-        "nextPageToken, files(id, name, mimeType, size, createdTime, modifiedTime, webViewLink, thumbnailLink, parents, owners, shared)",
+        "nextPageToken, files(id, name, mimeType, size, createdTime, modifiedTime, webViewLink, thumbnailLink, parents, owners, shared, sharingUser)",
     });
 
     return {
@@ -178,7 +321,7 @@ export async function listFiles(
   } catch (err) {
     if (isInvalidGrantError(err)) {
       throw new Error(
-        "Token Google Drive telah kadaluarsa atau dicabut (invalid_grant). Silakan sambungkan ulang akun ini."
+        "Token Google Drive telah kadaluarsa (invalid_grant). Pastikan project Google Cloud Console telah disetel ke 'In production' (Publish App), lalu sambungkan ulang akun sekali untuk mendapatkan token permanen."
       );
     }
     throw err;

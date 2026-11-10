@@ -8,8 +8,9 @@ import {
   ShieldCheck,
   Lock,
   ChevronRight,
-  Zap,
-  Sparkles,
+  UserCheck,
+  Layers,
+  Search,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -22,8 +23,8 @@ import { DashboardHero3D } from "@/components/landing/dashboard-hero-3d";
 import { VirtualCloudCore } from "@/components/landing/virtual-cloud-core";
 import { BentoFeatures } from "@/components/landing/bento-features";
 import { StorageCalculator } from "@/components/landing/storage-calculator";
-import { LogoMarquee } from "@/components/ui/marquee";
-import { SpotlightCard } from "@/components/ui/spotlight-card";
+import { SecurityArchitecture } from "@/components/landing/security-architecture";
+import { FaqAccordion } from "@/components/landing/faq-accordion";
 import { useLanguage } from "@/lib/i18n";
 
 interface LandingViewProps {
@@ -70,22 +71,16 @@ export function LandingView({ user }: LandingViewProps) {
             {/* Center: Navigation Anchors */}
             <nav className="hidden lg:flex items-center gap-7 text-sm font-medium text-muted-foreground">
               <a
-                href="#preview"
+                href="#how-it-works"
                 className="hover:text-foreground transition-colors"
               >
-                Dashboard
+                {t.navHowItWorks}
               </a>
               <a
                 href="#features"
                 className="hover:text-foreground transition-colors"
               >
                 {t.navFeatures}
-              </a>
-              <a
-                href="#routing"
-                className="hover:text-foreground transition-colors"
-              >
-                Smart Engine
               </a>
               <a
                 href="#calculator"
@@ -98,6 +93,12 @@ export function LandingView({ user }: LandingViewProps) {
                 className="hover:text-foreground transition-colors"
               >
                 {t.navSecurity}
+              </a>
+              <a
+                href="#faq"
+                className="hover:text-foreground transition-colors"
+              >
+                {t.navFaq}
               </a>
             </nav>
 
@@ -216,7 +217,7 @@ export function LandingView({ user }: LandingViewProps) {
             </div>
 
             {/* Architectural Trust Signals */}
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-6 sm:gap-8 text-xs font-mono text-muted-foreground">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-6 sm:gap-8 text-xs font-medium text-muted-foreground">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="size-4 text-emerald-500" />
                 <span>{t.trustOauth}</span>
@@ -240,21 +241,66 @@ export function LandingView({ user }: LandingViewProps) {
             </div>
           </section>
 
-          {/* ── Multi-Cloud Provider Logo Marquee ── */}
-          <div className="w-full border-y border-border/40 bg-secondary/15 backdrop-blur-md overflow-hidden relative z-10 py-3.5">
-            <LogoMarquee />
-          </div>
+          {/* ── Section: How It Works (3 Langkah Sederhana) ── */}
+          <section id="how-it-works" className="px-4 sm:px-8 max-w-7xl mx-auto">
+            <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
+              <h2 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
+                {t.howItWorksTitle}
+              </h2>
+              <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                {t.howItWorksDesc}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Step 1 */}
+              <div className="p-6 rounded-2xl bg-secondary/20 border border-border/70 hover:border-primary/40 transition-colors space-y-4">
+                <div className="size-11 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                  <UserCheck className="size-5" />
+                </div>
+                <h3 className="text-lg font-bold text-foreground">
+                  {t.howStep1Title}
+                </h3>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  {t.howStep1Desc}
+                </p>
+              </div>
+
+              {/* Step 2 */}
+              <div className="p-6 rounded-2xl bg-secondary/20 border border-border/70 hover:border-sky-500/40 transition-colors space-y-4">
+                <div className="size-11 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-500">
+                  <Layers className="size-5" />
+                </div>
+                <h3 className="text-lg font-bold text-foreground">
+                  {t.howStep2Title}
+                </h3>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  {t.howStep2Desc}
+                </p>
+              </div>
+
+              {/* Step 3 */}
+              <div className="p-6 rounded-2xl bg-secondary/20 border border-border/70 hover:border-emerald-500/40 transition-colors space-y-4">
+                <div className="size-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500">
+                  <Search className="size-5" />
+                </div>
+                <h3 className="text-lg font-bold text-foreground">
+                  {t.howStep3Title}
+                </h3>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  {t.howStep3Desc}
+                </p>
+              </div>
+            </div>
+          </section>
 
           {/* ── Section: Interactive Smart Routing Engine Sandbox ── */}
           <section id="routing" className="px-4 sm:px-8 max-w-7xl mx-auto">
             <div className="text-center max-w-2xl mx-auto space-y-3 mb-10">
-              <span className="text-xs font-mono uppercase tracking-wider text-primary font-semibold">
-                Autonomous Traffic Dispatch
-              </span>
               <h2 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
                 {t.vccSimTitle}
               </h2>
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                 {t.vccSimDesc}
               </p>
             </div>
@@ -262,19 +308,16 @@ export function LandingView({ user }: LandingViewProps) {
             <VirtualCloudCore />
           </section>
 
-          {/* ── Section: Bento 2.0 Capabilities ── */}
+          {/* ── Section: Bento Capabilities ── */}
           <section
             id="features"
             className="px-4 sm:px-8 max-w-7xl mx-auto space-y-10"
           >
             <div className="text-center max-w-2xl mx-auto space-y-3">
-              <span className="text-xs font-mono uppercase tracking-wider text-primary font-semibold">
-                {t.featuresSectionTag}
-              </span>
               <h2 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
                 {t.featuresSectionTitle}
               </h2>
-              <p className="text-sm text-muted-foreground leading-relaxed max-w-[58ch] mx-auto">
+              <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-[58ch] mx-auto">
                 {t.featuresSectionDesc}
               </p>
             </div>
@@ -287,41 +330,14 @@ export function LandingView({ user }: LandingViewProps) {
             <StorageCalculator />
           </section>
 
-          {/* ── Section: Security & Zero-Exposure Banner ── */}
+          {/* ── Section: Security & Zero-Exposure Architecture ── */}
           <section id="security" className="px-4 sm:px-8 max-w-7xl mx-auto">
-            <SpotlightCard className="p-8 sm:p-10 border border-border/80 relative overflow-hidden">
-              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-8">
-                <div className="flex items-start gap-4 max-w-2xl">
-                  <div className="size-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 text-primary mt-1 shadow-inner">
-                    <ShieldCheck className="size-6" />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="text-lg sm:text-xl font-bold text-foreground">
-                      {t.secTitle}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                      {t.secDesc}
-                    </p>
-                  </div>
-                </div>
+            <SecurityArchitecture />
+          </section>
 
-                <div className="flex flex-wrap gap-2.5 shrink-0">
-                  {[
-                    "AES-256-GCM",
-                    "OAuth 2.0 PKCE",
-                    "No File Caching",
-                    "Direct API Pipe",
-                  ].map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-[11px] font-mono px-3 py-1 rounded-xl bg-secondary/80 border border-border/80 text-foreground font-medium"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </SpotlightCard>
+          {/* ── Section: Frequently Asked Questions (Faq6 Accordion) ── */}
+          <section id="faq" className="px-4 sm:px-8 max-w-7xl mx-auto">
+            <FaqAccordion />
           </section>
         </main>
 

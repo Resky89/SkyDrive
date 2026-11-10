@@ -31,25 +31,30 @@ export async function autoConnectPrimaryGoogleAccount(userId: string) {
     const existing = user.storageAccounts.find((sa) => sa.email === user.email);
 
     if (existing) {
-      // If storage account exists, only update tokens if googleAuthAccount has a refresh token
-      // and either existing has no refreshToken or googleAuthAccount has newer expiry
-      const shouldUpdate =
-        googleAuthAccount.refreshToken &&
-        (!existing.refreshTokenEnc ||
-          (googleAuthAccount.accessTokenExpiresAt &&
-            existing.tokenExpiresAt &&
-            googleAuthAccount.accessTokenExpiresAt > existing.tokenExpiresAt));
+      // Update access token, but NEVER overwrite existing refreshToken with empty value
+      const updateData: {
+        accessTokenEnc?: string;
+        refreshTokenEnc?: string;
+        tokenExpiresAt?: Date | null;
+        isActive?: boolean;
+      } = {
+        isActive: true,
+      };
 
-      if (shouldUpdate && googleAuthAccount.refreshToken) {
-        await db.storageAccount.update({
-          where: { id: existing.id },
-          data: {
-            accessTokenEnc: encrypt(googleAuthAccount.accessToken),
-            refreshTokenEnc: encrypt(googleAuthAccount.refreshToken),
-            tokenExpiresAt: googleAuthAccount.accessTokenExpiresAt,
-          },
-        });
+      if (googleAuthAccount.accessToken) {
+        updateData.accessTokenEnc = encrypt(googleAuthAccount.accessToken);
+        updateData.tokenExpiresAt = googleAuthAccount.accessTokenExpiresAt;
       }
+
+      if (googleAuthAccount.refreshToken) {
+        updateData.refreshTokenEnc = encrypt(googleAuthAccount.refreshToken);
+      }
+
+      await db.storageAccount.update({
+        where: { id: existing.id },
+        data: updateData,
+      });
+
       return existing;
     }
 

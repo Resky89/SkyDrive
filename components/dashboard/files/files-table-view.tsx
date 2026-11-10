@@ -140,9 +140,16 @@ export const FilesTableView = memo(function FilesTableView({
                     </div>
                   </td>
                   <td className="py-3 px-4 pointer-events-none">
-                    <Badge variant="info" className="text-[10px] font-mono">
-                      {file.account.email}
-                    </Badge>
+                    <div className="flex items-center gap-1.5">
+                      <Badge variant="info" className="text-[10px] font-mono">
+                        {file.account.email}
+                      </Badge>
+                      {file.isShared && (
+                        <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium truncate max-w-[120px]" title={file.sharedBy || undefined}>
+                          ← {file.sharedBy || "Dibagikan"}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="py-3 px-4 font-mono text-[11px] text-muted-foreground pointer-events-none">
                     {formatBytes(Number(file.size))}

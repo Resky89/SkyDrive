@@ -131,11 +131,20 @@ export const FileCard = memo(function FileCard({
           </div>
         )}
 
-        {/* Storage Account Badge */}
-        <div className="absolute top-2 right-2 z-10">
+        {/* Storage Account & Shared Status Badges */}
+        <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 max-w-[80%] justify-end">
+          {file.isShared && (
+            <Badge
+              variant="outline"
+              className="text-[9px] font-sans font-medium bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30 backdrop-blur-md px-1.5 py-0.5"
+              title={file.sharedBy ? `Dibagikan oleh: ${file.sharedBy}` : "File yang dibagikan"}
+            >
+              Dibagikan
+            </Badge>
+          )}
           <Badge
             variant="info"
-            className="text-[9px] font-mono bg-background/80 backdrop-blur-md shadow-sm border border-border"
+            className="text-[9px] font-mono bg-background/80 backdrop-blur-md shadow-sm border border-border truncate"
           >
             {file.account.email.split("@")[0]}
           </Badge>
@@ -160,86 +169,83 @@ export const FileCard = memo(function FileCard({
             <span>{formatBytes(Number(file.size))}</span>
             <span>{new Date(file.updatedAt).toLocaleDateString()}</span>
           </div>
+          {file.isShared && file.sharedBy && (
+            <div className="text-[10px] text-blue-600 dark:text-blue-400 truncate">
+              Oleh: {file.sharedBy}
+            </div>
+          )}
         </div>
 
         <div
           className="flex items-center justify-end pt-2 border-t border-border mt-auto"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="size-7 rounded-lg text-muted-foreground hover:text-primary transition-colors"
-              title="Unduh file"
-              onClick={(e) => onDownload(file, e)}
-              disabled={downloadingId === file.id}
-            >
-              {downloadingId === file.id ? (
-                <Loader2 className="size-3.5 animate-spin text-primary" />
-              ) : (
-                <Download className="size-3.5" />
-              )}
-            </Button>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-7 rounded-lg text-muted-foreground hover:text-foreground"
-                  title="Opsi File"
-                >
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 rounded-lg text-muted-foreground hover:text-foreground"
+                title="Opsi File"
+              >
+                {downloadingId === file.id ? (
+                  <Loader2 className="size-3.5 animate-spin text-primary" />
+                ) : (
                   <MoreVertical className="size-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-44">
-                <DropdownMenuItem
-                  onClick={() => onPreview(file)}
-                  className="gap-2 text-xs font-semibold"
-                >
-                  <Eye className="size-3.5 text-primary" />
-                  <span>Preview</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={(e) => onDownload(file, e)}
-                  className="gap-2 text-xs font-semibold text-primary focus:text-primary"
-                >
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem
+                onClick={() => onPreview(file)}
+                className="gap-2 text-xs font-semibold"
+              >
+                <Eye className="size-3.5 text-primary" />
+                <span>Preview</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => onDownload(file, e)}
+                disabled={downloadingId === file.id}
+                className="gap-2 text-xs font-semibold text-primary focus:text-primary"
+              >
+                {downloadingId === file.id ? (
+                  <Loader2 className="size-3.5 animate-spin text-primary" />
+                ) : (
                   <Download className="size-3.5 text-primary" />
-                  <span>Unduh</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className="gap-2 text-xs">
-                  <a
-                    href={
-                      file.webViewLink ||
-                      `https://drive.google.com/file/d/${file.driveFileId}/view`
-                    }
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <ExternalLink className="size-3.5 text-muted-foreground" />
-                    <span>Buka di Google Drive</span>
-                  </a>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => onOpenMove(file, e)} className="gap-2 text-xs">
-                  <FolderInput className="size-3.5 text-muted-foreground" />
-                  <span>Pindahkan</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => onOpenRename(file, e)} className="gap-2 text-xs">
-                  <Pencil className="size-3.5 text-muted-foreground" />
-                  <span>Ganti Nama</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={(e) => onOpenDelete(file, e)}
-                  className="gap-2 text-xs text-destructive focus:text-destructive focus:bg-destructive/10"
+                )}
+                <span>{downloadingId === file.id ? "Mengunduh..." : "Unduh"}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="gap-2 text-xs">
+                <a
+                  href={
+                    file.webViewLink ||
+                    `https://drive.google.com/file/d/${file.driveFileId}/view`
+                  }
+                  target="_blank"
+                  rel="noopener noreferrer"
                 >
-                  <Trash2 className="size-3.5 text-destructive" />
-                  <span>Hapus</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                  <ExternalLink className="size-3.5 text-muted-foreground" />
+                  <span>Buka di Google Drive</span>
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => onOpenMove(file, e)} className="gap-2 text-xs">
+                <FolderInput className="size-3.5 text-muted-foreground" />
+                <span>Pindahkan</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => onOpenRename(file, e)} className="gap-2 text-xs">
+                <Pencil className="size-3.5 text-muted-foreground" />
+                <span>Ganti Nama</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={(e) => onOpenDelete(file, e)}
+                className="gap-2 text-xs text-destructive focus:text-destructive focus:bg-destructive/10"
+              >
+                <Trash2 className="size-3.5 text-destructive" />
+                <span>Hapus</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </SpotlightCard>

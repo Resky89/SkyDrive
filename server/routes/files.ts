@@ -12,11 +12,13 @@ import {
   moveFileInDrive,
   downloadFileStream,
   listFiles,
+  getGoogleDriveClient,
 } from "@/lib/google-drive";
 import {
   selectStorageAccount,
   type UploadStrategy,
 } from "@/lib/storage-algorithm";
+import { autoConnectPrimaryGoogleAccount } from "@/lib/auto-connect";
 
 function safeSerialize<T>(data: T): T {
   return JSON.parse(
@@ -29,7 +31,7 @@ function safeSerialize<T>(data: T): T {
 export const listFilesSchema = z.object({
   page: z.string().optional().default("1"),
   limit: z.string().optional().default("24"),
-  scope: z.enum(["mydrive", "sharedWithMe"]).optional().default("mydrive"),
+  scope: z.enum(["all", "mydrive", "sharedWithMe"]).optional().default("all"),
   q: z.string().optional(),
   accountId: z.string().optional(),
   type: z.string().optional().default("all"),
@@ -56,12 +58,64 @@ export const bulkMoveSchema = z.object({
   destinationFolderId: z.string().min(1),
 });
 
+/**
+ * Zero-Retention Helper: Resolve which storage account has access to a Google Drive item
+ * without persisting user files/folders in the local database.
+ */
+async function resolveAccountForDriveItem(
+  userId: string,
+  itemId: string,
+  hintAccountId?: string
+): Promise<{ accountId: string; fileId: string; mimeType?: string; name?: string } | null> {
+  const accounts = await db.storageAccount.findMany({
+    where: { userId, isActive: true },
+    select: { id: true },
+  });
+
+  if (accounts.length === 0) return null;
+
+  const orderedAccounts = hintAccountId
+    ? [
+        ...accounts.filter((a) => a.id === hintAccountId),
+        ...accounts.filter((a) => a.id !== hintAccountId),
+      ]
+    : accounts;
+
+  for (const acc of orderedAccounts) {
+    try {
+      const drive = await getGoogleDriveClient(acc.id);
+      const { data } = await drive.files.get({
+        fileId: itemId,
+        fields: "id, name, mimeType, trashed",
+        supportsAllDrives: true,
+      });
+
+      if (data && data.id && !data.trashed) {
+        return {
+          accountId: acc.id,
+          fileId: data.id,
+          mimeType: data.mimeType || undefined,
+          name: data.name || undefined,
+        };
+      }
+    } catch {
+      // Continue to next account if not found or unauthorized in this account
+    }
+  }
+
+  return null;
+}
+
 export const filesRouter = new Hono<Env>()
   .use("*", authMiddleware)
 
   // 0. List Files and Folders (Directory Explorer)
   .get("/", zValidator("query", listFilesSchema), async (c) => {
     const user = c.get("user");
+
+    // Automatically ensure primary login Google Account is connected
+    await autoConnectPrimaryGoogleAccount(user.id);
+
     const {
       page: rawPage,
       limit: rawLimit,
@@ -77,13 +131,9 @@ export const filesRouter = new Hono<Env>()
     const page = Math.max(1, parseInt(rawPage || "1", 10));
     const limit = Math.max(1, Math.min(100, parseInt(rawLimit || "24", 10)));
 
-    // 1. Get active storage accounts
-    const accountWhere = accountId
-      ? { id: accountId, userId: user.id, isActive: true }
-      : { userId: user.id, isActive: true };
-
-    const accounts = await db.storageAccount.findMany({
-      where: accountWhere,
+    // 1. Get ALL active storage accounts (so frontend dropdown/tabs always show complete pool)
+    const allUserAccounts = await db.storageAccount.findMany({
+      where: { userId: user.id, isActive: true },
       select: {
         id: true,
         email: true,
@@ -91,9 +141,10 @@ export const filesRouter = new Hono<Env>()
         availableStorage: true,
         usagePercentage: true,
       },
+      orderBy: { createdAt: "asc" },
     });
 
-    if (accounts.length === 0) {
+    if (allUserAccounts.length === 0) {
       return c.json({
         folders: [],
         files: [],
@@ -105,6 +156,11 @@ export const filesRouter = new Hono<Env>()
         hasMore: false,
       });
     }
+
+    // Determine target accounts to query
+    const accounts = accountId
+      ? allUserAccounts.filter((a) => a.id === accountId)
+      : allUserAccounts;
 
     const currentParentId = folderId && folderId !== "root" ? folderId : "root";
 
@@ -119,60 +175,37 @@ export const filesRouter = new Hono<Env>()
             pageSize: 60,
           });
 
-          // Upsert into DB in background for cache / analytics
-          for (const df of driveFiles) {
-            if (!df.id || !df.name) continue;
-            await db.file.upsert({
-              where: {
-                storageAccountId_providerFileId: {
-                  storageAccountId: acc.id,
-                  providerFileId: df.id,
-                },
-              },
-              update: {
-                name: df.name,
-                mimeType: df.mimeType,
-                size: BigInt(df.size || 0),
-                parentProviderId: currentParentId,
-                webViewLink: df.webViewLink,
-                thumbnailLink: df.thumbnailLink,
-                status: "active",
-              },
-              create: {
-                userId: user.id,
-                storageAccountId: acc.id,
-                providerFileId: df.id,
-                name: df.name,
-                mimeType: df.mimeType,
-                size: BigInt(df.size || 0),
-                parentProviderId: currentParentId,
-                webViewLink: df.webViewLink,
-                thumbnailLink: df.thumbnailLink,
-                status: "active",
-              },
-            });
-          }
+          return driveFiles.map((df) => {
+            const owner = df.owners?.[0];
+            const isOwner = Boolean(owner?.me);
+            const isShared = !isOwner || Boolean(df.shared);
+            const sharedBy = !isOwner
+              ? df.sharingUser?.displayName || owner?.displayName || owner?.emailAddress || "Pengguna Luar"
+              : null;
 
-          return driveFiles.map((df) => ({
-            id: df.id,
-            name: df.name,
-            size: (df.size || 0).toString(),
-            mimeType: df.mimeType,
-            driveFileId: df.id,
-            parentFolderId: currentParentId,
-            isFolder: df.mimeType === "application/vnd.google-apps.folder",
-            status: "active",
-            createdAt: df.createdTime || new Date().toISOString(),
-            updatedAt: df.modifiedTime || new Date().toISOString(),
-            webViewLink: df.webViewLink,
-            thumbnailLink: df.thumbnailLink || null,
-            iconLink: (df as any).iconLink || null,
-            account: {
-              id: acc.id,
-              email: acc.email,
-              displayName: acc.displayName,
-            },
-          }));
+            return {
+              id: df.id,
+              name: df.name,
+              size: (df.size || 0).toString(),
+              mimeType: df.mimeType,
+              driveFileId: df.id,
+              parentFolderId: currentParentId,
+              isFolder: df.mimeType === "application/vnd.google-apps.folder",
+              status: "active",
+              createdAt: df.createdTime || new Date().toISOString(),
+              updatedAt: df.modifiedTime || new Date().toISOString(),
+              webViewLink: df.webViewLink,
+              thumbnailLink: df.thumbnailLink || null,
+              iconLink: (df as any).iconLink || null,
+              isShared,
+              sharedBy,
+              account: {
+                id: acc.id,
+                email: acc.email,
+                displayName: acc.displayName,
+              },
+            };
+          });
         } catch (err: unknown) {
           const msg = (err as Error)?.message || "Unknown error";
           console.warn(`Could not list files for ${acc.email} (${scope}): ${msg}`);
@@ -285,11 +318,13 @@ export const filesRouter = new Hono<Env>()
         folders,
         files,
         allItems: paginatedItems,
-        accounts: accounts.map((a) => ({
+        accounts: allUserAccounts.map((a) => ({
           id: a.id,
           email: a.email,
+          displayName: a.displayName,
           availableStorage: a.availableStorage.toString(),
           usagePercentage: a.usagePercentage,
+          isLoginAccount: a.email.toLowerCase() === (user.email || "").toLowerCase(),
         })),
         page,
         limit,
@@ -341,19 +376,6 @@ export const filesRouter = new Hono<Env>()
       );
     }
 
-    const upload = await db.upload.create({
-      data: {
-        userId: user.id,
-        storageAccountId: selectedAccount.id,
-        originalFilename: file.name,
-        fileSize,
-        mimeType: file.type,
-        uploadStrategy: strategy,
-        status: "in_progress",
-        startedAt: new Date(),
-      },
-    });
-
     try {
       const buffer = Buffer.from(await file.arrayBuffer());
 
@@ -364,78 +386,26 @@ export const filesRouter = new Hono<Env>()
         let currentParent = targetParentFolderId;
 
         for (const segment of directorySegments) {
-          let existingFolder = await db.file.findFirst({
-            where: {
-              userId: user.id,
-              storageAccountId: selectedAccount.id,
-              name: segment,
-              mimeType: "application/vnd.google-apps.folder",
-              parentProviderId: currentParent || null,
-              status: "active",
-            },
-          });
-
-          if (!existingFolder) {
-            const newDriveFolder = await createFolderInDrive(
-              selectedAccount.id,
-              segment,
-              currentParent
-            );
-
-            if (newDriveFolder.id) {
-              existingFolder = await db.file.create({
-                data: {
-                  userId: user.id,
-                  storageAccountId: selectedAccount.id,
-                  providerFileId: newDriveFolder.id,
-                  name: segment,
-                  mimeType: "application/vnd.google-apps.folder",
-                  size: BigInt(0),
-                  parentProviderId: currentParent || null,
-                  webViewLink: newDriveFolder.webViewLink,
-                  status: "active",
-                },
-              });
-            }
-          }
-
-          if (existingFolder) {
-            currentParent = existingFolder.providerFileId;
+          const newDriveFolder = await createFolderInDrive(
+            selectedAccount.id,
+            segment,
+            currentParent
+          );
+          if (newDriveFolder.id) {
+            currentParent = newDriveFolder.id;
           }
         }
 
         targetParentFolderId = currentParent;
       }
 
-      // Upload to Google Drive
+      // Upload to Google Drive directly (Zero-Retention)
       const driveFile = await uploadFileToDrive(selectedAccount.id, {
         name: file.name,
         mimeType: file.type || "application/octet-stream",
         buffer,
         size: file.size,
         parentFolderId: targetParentFolderId,
-      });
-
-      const savedFile = await db.file.create({
-        data: {
-          userId: user.id,
-          storageAccountId: selectedAccount.id,
-          providerFileId: driveFile.id!,
-          name: driveFile.name ?? file.name,
-          mimeType: driveFile.mimeType ?? file.type,
-          size: BigInt(driveFile.size ?? 0),
-          parentProviderId: targetParentFolderId || null,
-          webViewLink: driveFile.webViewLink,
-          status: "active",
-        },
-      });
-
-      await db.upload.update({
-        where: { id: upload.id },
-        data: {
-          status: "completed",
-          completedAt: new Date(),
-        },
       });
 
       // Update storage account used / available
@@ -459,19 +429,26 @@ export const filesRouter = new Hono<Env>()
         },
       });
 
-      await db.activityLog.create({
-        data: {
-          userId: user.id,
-          storageAccountId: selectedAccount.id,
-          activityType: "file_uploaded",
-          description: `Uploaded "${file.name}" (${file.size} bytes) to ${selectedAccount.email} via ${strategy} strategy`,
+      const fileResponse = {
+        id: driveFile.id!,
+        name: driveFile.name ?? file.name,
+        mimeType: driveFile.mimeType ?? file.type,
+        size: (driveFile.size ?? file.size).toString(),
+        parentFolderId: targetParentFolderId || null,
+        webViewLink: driveFile.webViewLink,
+        status: "active",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        account: {
+          id: selectedAccount.id,
+          email: selectedAccount.email,
         },
-      });
+      };
 
       return c.json(
         safeSerialize({
           success: true,
-          file: savedFile,
+          file: fileResponse,
           account: {
             id: selectedAccount.id,
             email: selectedAccount.email,
@@ -480,14 +457,6 @@ export const filesRouter = new Hono<Env>()
       );
     } catch (err: any) {
       console.error("Upload error:", err);
-      await db.upload.update({
-        where: { id: upload.id },
-        data: {
-          status: "failed",
-          errorMessage: err.message,
-          completedAt: new Date(),
-        },
-      });
       return c.json({ error: err.message || "Upload failed" }, 500);
     }
   })
@@ -551,42 +520,12 @@ export const filesRouter = new Hono<Env>()
     await Promise.allSettled(
       itemIds.map(async (id) => {
         try {
-          const file = await db.file.findFirst({
-            where: {
-              userId: user.id,
-              OR: [{ id }, { providerFileId: id }],
-            },
-          });
-
-          if (file) {
-            try {
-              await deleteFileFromDrive(file.storageAccountId, file.providerFileId);
-            } catch (err) {
-              console.warn("Drive delete file warning:", err);
-            }
-            await db.file.update({
-              where: { id: file.id },
-              data: { status: "deleted" },
-            });
+          const resolved = await resolveAccountForDriveItem(user.id, id);
+          if (resolved) {
+            await deleteFileFromDrive(resolved.accountId, resolved.fileId);
             deletedCount++;
-            return;
-          }
-
-          const folder = await db.folder.findFirst({
-            where: {
-              userId: user.id,
-              OR: [{ id }, { providerFolderId: id }],
-            },
-          });
-
-          if (folder) {
-            try {
-              await deleteFileFromDrive(folder.storageAccountId, folder.providerFolderId);
-            } catch (err) {
-              console.warn("Drive delete folder warning:", err);
-            }
-            await db.folder.delete({ where: { id: folder.id } });
-            deletedCount++;
+          } else {
+            errors.push(`Item ${id}: Tidak ditemukan pada akun Drive yang aktif`);
           }
         } catch (err: any) {
           errors.push(`Item ${id}: ${err.message}`);
@@ -613,45 +552,16 @@ export const filesRouter = new Hono<Env>()
     await Promise.allSettled(
       itemIds.map(async (id) => {
         try {
-          const file = await db.file.findFirst({
-            where: {
-              userId: user.id,
-              OR: [{ id }, { providerFileId: id }],
-            },
-          });
-
-          if (file) {
+          const resolved = await resolveAccountForDriveItem(user.id, id);
+          if (resolved) {
             await moveFileInDrive(
-              file.storageAccountId,
-              file.providerFileId,
+              resolved.accountId,
+              resolved.fileId,
               destinationFolderId
             );
-            await db.file.update({
-              where: { id: file.id },
-              data: { parentProviderId: destinationFolderId },
-            });
             movedCount++;
-            return;
-          }
-
-          const folder = await db.folder.findFirst({
-            where: {
-              userId: user.id,
-              OR: [{ id }, { providerFolderId: id }],
-            },
-          });
-
-          if (folder) {
-            await moveFileInDrive(
-              folder.storageAccountId,
-              folder.providerFolderId,
-              destinationFolderId
-            );
-            await db.folder.update({
-              where: { id: folder.id },
-              data: { parentFolderId: destinationFolderId },
-            });
-            movedCount++;
+          } else {
+            errors.push(`Item ${id}: Tidak ditemukan pada akun Drive yang aktif`);
           }
         } catch (err: any) {
           errors.push(`Item ${id}: ${err.message}`);
@@ -673,26 +583,19 @@ export const filesRouter = new Hono<Env>()
     const user = c.get("user");
     const id = c.req.param("id");
 
-    const file = await db.file.findFirst({
-      where: {
-        userId: user.id,
-        OR: [{ id }, { providerFileId: id }],
-        status: "active",
-      },
-    });
-
-    if (!file) {
+    const resolved = await resolveAccountForDriveItem(user.id, id);
+    if (!resolved) {
       return c.json({ error: "File not found" }, 404);
     }
 
     try {
       const { stream, mimeType, extension } = await downloadFileStream(
-        file.storageAccountId,
-        file.providerFileId,
-        file.mimeType || undefined
+        resolved.accountId,
+        resolved.fileId,
+        resolved.mimeType
       );
 
-      let fileName = file.name;
+      let fileName = resolved.name || "download";
       if (extension && !fileName.endsWith(extension)) {
         fileName = `${fileName}${extension}`;
       }
@@ -717,9 +620,6 @@ export const filesRouter = new Hono<Env>()
         `attachment; filename="${encodeURIComponent(fileName)}"; filename*=UTF-8''${encodeURIComponent(fileName)}`
       );
       headers.set("Content-Type", mimeType || "application/octet-stream");
-      if (file.size) {
-        headers.set("Content-Length", file.size.toString());
-      }
 
       return new Response(webStream, {
         status: 200,
@@ -734,7 +634,7 @@ export const filesRouter = new Hono<Env>()
     }
   })
 
-  // 4. Rename or Move File / Folder
+  // 6. Rename or Move File / Folder
   .patch(
     "/:id",
     zValidator("json", patchFileSchema),
@@ -750,130 +650,53 @@ export const filesRouter = new Hono<Env>()
         );
       }
 
-      // Try finding in File table
-      const file = await db.file.findFirst({
-        where: {
-          userId: user.id,
-          OR: [{ id }, { providerFileId: id }],
-        },
-      });
-
-      if (file) {
-        const updateData: { name?: string; parentProviderId?: string } = {};
-
-        if (name && typeof name === "string" && name.trim()) {
-          const cleanName = name.trim();
-          await renameFileInDrive(
-            file.storageAccountId,
-            file.providerFileId,
-            cleanName
-          );
-          updateData.name = cleanName;
-        }
-
-        if (destinationFolderId && typeof destinationFolderId === "string") {
-          await moveFileInDrive(
-            file.storageAccountId,
-            file.providerFileId,
-            destinationFolderId
-          );
-          updateData.parentProviderId = destinationFolderId;
-        }
-
-        const updated = await db.file.update({
-          where: { id: file.id },
-          data: updateData,
-        });
-
-        return c.json(safeSerialize({ success: true, item: updated }));
+      const resolved = await resolveAccountForDriveItem(user.id, id);
+      if (!resolved) {
+        return c.json({ error: "Item not found" }, 404);
       }
 
-      // Try finding in Folder table
-      const folder = await db.folder.findFirst({
-        where: {
-          userId: user.id,
-          OR: [{ id }, { providerFolderId: id }],
-        },
-      });
-
-      if (folder) {
-        const updateData: { name?: string; parentFolderId?: string } = {};
-
-        if (name && typeof name === "string" && name.trim()) {
-          const cleanName = name.trim();
-          await renameFileInDrive(
-            folder.storageAccountId,
-            folder.providerFolderId,
-            cleanName
-          );
-          updateData.name = cleanName;
-        }
-
-        if (destinationFolderId && typeof destinationFolderId === "string") {
-          await moveFileInDrive(
-            folder.storageAccountId,
-            folder.providerFolderId,
-            destinationFolderId
-          );
-          updateData.parentFolderId = destinationFolderId;
-        }
-
-        const updated = await db.folder.update({
-          where: { id: folder.id },
-          data: updateData,
-        });
-
-        return c.json(safeSerialize({ success: true, item: updated }));
+      if (name && typeof name === "string" && name.trim()) {
+        await renameFileInDrive(
+          resolved.accountId,
+          resolved.fileId,
+          name.trim()
+        );
       }
 
-      return c.json({ error: "Item not found" }, 404);
+      if (destinationFolderId && typeof destinationFolderId === "string") {
+        await moveFileInDrive(
+          resolved.accountId,
+          resolved.fileId,
+          destinationFolderId
+        );
+      }
+
+      return c.json({
+        success: true,
+        item: {
+          id: resolved.fileId,
+          name: name ? name.trim() : resolved.name,
+          parentFolderId: destinationFolderId || undefined,
+        },
+      });
     }
   )
 
-  // 5. Delete File / Folder
+  // 7. Delete File / Folder
   .delete("/:id", async (c) => {
     const user = c.get("user");
     const id = c.req.param("id");
 
-    const file = await db.file.findFirst({
-      where: {
-        userId: user.id,
-        OR: [{ id }, { providerFileId: id }],
-      },
-    });
-
-    if (file) {
-      try {
-        await deleteFileFromDrive(file.storageAccountId, file.providerFileId);
-      } catch (err) {
-        console.warn("Drive delete warning:", err);
-      }
-      await db.file.update({
-        where: { id: file.id },
-        data: { status: "deleted" },
-      });
-      return c.json({ success: true, message: "File moved to trash" });
+    const resolved = await resolveAccountForDriveItem(user.id, id);
+    if (!resolved) {
+      return c.json({ error: "Item not found" }, 404);
     }
 
-    const folder = await db.folder.findFirst({
-      where: {
-        userId: user.id,
-        OR: [{ id }, { providerFolderId: id }],
-      },
-    });
-
-    if (folder) {
-      try {
-        await deleteFileFromDrive(
-          folder.storageAccountId,
-          folder.providerFolderId
-        );
-      } catch (err) {
-        console.warn("Drive delete folder warning:", err);
-      }
-      await db.folder.delete({ where: { id: folder.id } });
-      return c.json({ success: true, message: "Folder moved to trash" });
+    try {
+      await deleteFileFromDrive(resolved.accountId, resolved.fileId);
+      return c.json({ success: true, message: "Item moved to trash" });
+    } catch (err: any) {
+      console.warn("Drive delete warning:", err);
+      return c.json({ error: err.message || "Failed to delete item" }, 500);
     }
-
-    return c.json({ error: "Item not found" }, 404);
   });

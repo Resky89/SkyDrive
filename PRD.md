@@ -7,7 +7,7 @@
 **Last Updated:** 30 August 2026  
 **Author:** Portfolio Project
 
-> *One workspace. Multiple clouds. Smarter storage.*
+> *One workspace. All your Google Drives. Smarter storage.*
 
 ---
 
@@ -47,9 +47,9 @@ Alih-alih berpindah-pindah antar akun Google secara manual, SkyDrive menjadi lap
 - Pencarian file di seluruh akun yang terhubung
 - Analitik penggunaan storage lintas akun
 
-### Scope Awal
+### Lingkup Produk
 
-Fokus pertama adalah **Google Drive integration**. Dukungan provider lain (Dropbox, OneDrive, S3) direncanakan pada fase future.
+Fokus eksklusif produk adalah **Google Drive Multi-Account Virtual Storage Aggregator**. Mengkonsolidasikan multiple akun Google Drive (personal, workspace, kampus) ke dalam satu ruang penyimpanan terpadu yang mudah dipahami oleh pengguna awam tanpa perlu berlangganan cloud storage berbayar.
 
 ---
 
@@ -60,10 +60,10 @@ Fokus pertama adalah **Google Drive integration**. Dukungan provider lain (Dropb
 Pengguna dengan multiple akun Google memiliki storage yang tersebar. Contoh:
 
 ```
-personal@gmail.com   → 15 GB
-college@gmail.com    → 15 GB
-work@gmail.com       → 15 GB
-backup@gmail.com     → 15 GB
+account1@gmail.com   → 15 GB
+account2@gmail.com   → 15 GB
+account3@gmail.com   → 15 GB
+archive@gmail.com    → 15 GB
 ─────────────────────────────
 Total                → 60 GB (tersebar)
 ```
@@ -110,41 +110,35 @@ Meskipun total kapasitas besar, pengguna tidak dapat menggunakannya secara efisi
 
 ### Primary Users
 
-#### 🎓 Mahasiswa
-Memiliki multiple akun untuk:
-- File personal dan hiburan
-- Dokumen akademik dan tugas
-- Backup skripsi/thesis
-- Data penelitian
+#### 👨‍💻 Software Engineers & DevOps
+Memiliki multiple akun Google Drive untuk:
+- Project backup, binary releases, dan repository asset
+- Dokumentasi teknis dan environment snapshot
+- Dataset storage, cache, dan build artifacts
 
-#### 👨‍💻 Developer
-Memiliki multiple akun untuk:
-- Project backup dan source files
-- Dokumentasi teknis
-- Dataset storage
-- Personal projects
+#### 🎨 Creative Studios & Media Professionals
+Memiliki multiple akun Google Drive untuk:
+- Aset multimedia RAW, render 4K, dan master files
+- Dokumen kontrak, deliverable, dan asset produksi
+- Arsip project berkapasitas besar
 
-#### 💼 Freelancer
-Memiliki multiple akun untuk:
-- Project personal
-- File dan aset klien
-- Dokumen kerja
-- Backup dan arsip
-
-#### 👤 General Users
-Siapapun yang memiliki lebih dari satu akun Google dan ingin manajemen storage terpusat.
+#### ⚡ Cloud Power Users & Freelance Consultants
+Memiliki multiple akun Google Drive untuk:
+- Segmentasi workspace antar project dan domain pekerjaan
+- Distribusi kuota penyimpanan berkapasitas masif
+- Backup data berkala tanpa biaya langganan cloud berulang
 
 ### User Persona
 
-**Persona 1 — Mahasiswa Tingkat Akhir**
-- Nama: Reska, 22 tahun
-- Masalah: Punya 3 akun Google (personal, kampus, backup). Sering bingung skripsi tersimpan di mana. Sering kehabisan storage di satu akun padahal akun lain masih banyak.
-- Kebutuhan: Dashboard yang menampilkan semua storage, upload pintar, dan pencarian terpadu.
+**Persona 1 — Cloud Infrastructure Engineer**
+- Nama: Reska, 26 tahun
+- Masalah: Mengelola 3+ akun Google Drive (Primary Storage Node, Secondary High-Capacity Node, dan Archive Node). Sering mengalami kendala fragmentasi kapasitas saat upload file besar dan membuang waktu mencari file lintas akun.
+- Kebutuhan: Unified dashboard, smart upload routing berbasis kuota leluasa, dan pencarian file global instan.
 
-**Persona 2 — Developer Freelance**
-- Nama: Andi, 26 tahun
-- Masalah: 4 akun Google untuk project berbeda. Butuh waktu lama untuk cek storage dan upload file ke akun yang tepat.
-- Kebutuhan: Smart allocation, upload history, dan analytics untuk tracking penggunaan storage.
+**Persona 2 — Digital Media & Technical Consultant**
+- Nama: Andi, 29 tahun
+- Masalah: Memiliki 4 akun Google Drive terpisah untuk berbagai workspace klien. Butuh monitoring agregat kapasitas secara realtime tanpa harus bolak-balik login/logout.
+- Kebutuhan: Heuristic quota balancing, telemetry analitik storage, dan direct streaming tanpa buffer disk server.
 
 ---
 
@@ -216,10 +210,10 @@ User → Connect Google Account
 
 | Account | Used | Available | Usage |
 |---------|------|-----------|-------|
-| personal@gmail.com | 12 GB | 3 GB | 80% |
-| college@gmail.com | 10 GB | 5 GB | 67% |
-| work@gmail.com | 18 GB | 2 GB | 90% |
-| backup@gmail.com | 2 GB | 13 GB | 13% |
+| account1@gmail.com | 12 GB | 3 GB | 80% |
+| account2@gmail.com | 10 GB | 5 GB | 67% |
+| account3@gmail.com | 18 GB | 2 GB | 90% |
+| archive@gmail.com | 2 GB | 13 GB | 13% |
 
 ---
 
@@ -853,7 +847,7 @@ Next.js → MySQL → Google OAuth → Google Drive API
 
 | Feature | Deskripsi |
 |---------|-----------|
-| **Multi Cloud Provider** | Dukungan Dropbox, OneDrive, AWS S3, Cloudflare R2 |
+| **Google Workspace & Shared Drives** | Dukungan Google Workspace Organisasi dan Shared Drives (Google Drive) |
 | **File Transfer** | Pindahkan file antar akun (A → B) |
 | **Auto Storage Balancing** | Redistribusi otomatis agar usage merata |
 | **File Recommendation** | AI-powered rekomendasi akun berdasarkan tipe file |
@@ -934,4 +928,4 @@ Next.js → MySQL → Google OAuth → Google Drive API
 
 ---
 
-> **SkyDrive — One workspace. Multiple clouds. Smarter storage.**
+> **SkyDrive — One workspace. All your Google Drives. Smarter storage.**

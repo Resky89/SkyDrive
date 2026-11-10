@@ -17,7 +17,7 @@ export const storageRouter = new Hono<Env>()
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const [accounts, analytics, filesList, recentUploads] = await Promise.all([
+    const [accounts, analytics] = await Promise.all([
       db.storageAccount.findMany({
         where: { userId: user.id, isActive: true },
         orderBy: { createdAt: "desc" },
@@ -30,45 +30,9 @@ export const storageRouter = new Hono<Env>()
         include: { storageAccount: { select: { email: true } } },
         orderBy: { recordedAt: "asc" },
       }),
-      db.file.findMany({
-        where: { userId: user.id, status: "active" },
-        select: { mimeType: true, size: true },
-      }),
-      db.upload.findMany({
-        where: { userId: user.id },
-        include: { storageAccount: { select: { email: true } } },
-        orderBy: { createdAt: "desc" },
-        take: 8,
-      }),
     ]);
 
     const aggregate = calculateAggregateStats(accounts);
-
-    // Compute media category breakdown
-    let photosSize = BigInt(0);
-    let videosSize = BigInt(0);
-    let documentsSize = BigInt(0);
-    let othersSize = BigInt(0);
-
-    for (const file of filesList) {
-      const mime = (file.mimeType || "").toLowerCase();
-      const s = file.size || BigInt(0);
-      if (mime.startsWith("image/")) {
-        photosSize += s;
-      } else if (mime.startsWith("video/")) {
-        videosSize += s;
-      } else if (
-        mime.includes("pdf") ||
-        mime.includes("document") ||
-        mime.includes("sheet") ||
-        mime.includes("presentation") ||
-        mime.includes("text")
-      ) {
-        documentsSize += s;
-      } else {
-        othersSize += s;
-      }
-    }
 
     // Group analytics by account
     const byAccount = analytics.reduce(
@@ -89,17 +53,17 @@ export const storageRouter = new Hono<Env>()
     const summaryData = {
       totalAccounts: accounts.length,
       activeAccounts: accounts.filter((a) => a.isActive).length,
-      totalFiles: filesList.length,
+      totalFiles: 0,
       totalStorage: aggregate.totalStorage.toString(),
       usedStorage: aggregate.usedStorage.toString(),
       availableStorage: aggregate.availableStorage.toString(),
       usagePercentage: aggregate.overallPercentage,
       accountCount: aggregate.accountCount,
       breakdown: {
-        photosSize: photosSize.toString(),
-        videosSize: videosSize.toString(),
-        documentsSize: documentsSize.toString(),
-        othersSize: othersSize.toString(),
+        photosSize: "0",
+        videosSize: "0",
+        documentsSize: "0",
+        othersSize: "0",
         freeStorage: aggregate.availableStorage.toString(),
         usedStorage: aggregate.usedStorage.toString(),
         totalStorage: aggregate.totalStorage.toString(),
@@ -121,21 +85,13 @@ export const storageRouter = new Hono<Env>()
         isActive: a.isActive,
         lastSyncedAt: a.lastSyncedAt,
       })),
-      recentUploads: recentUploads.map((u) => ({
-        id: u.id,
-        name: u.originalFilename,
-        size: u.fileSize.toString(),
-        mimeType: u.mimeType,
-        status: u.status,
-        createdAt: u.createdAt,
-        account: u.storageAccount,
-      })),
+      recentUploads: [],
       byAccount,
       filesByCategory: {
-        photos: photosSize.toString(),
-        videos: videosSize.toString(),
-        documents: documentsSize.toString(),
-        others: othersSize.toString(),
+        photos: "0",
+        videos: "0",
+        documents: "0",
+        others: "0",
       },
     });
   });

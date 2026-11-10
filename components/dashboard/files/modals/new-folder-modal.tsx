@@ -114,6 +114,7 @@ export function NewFolderModal({
                 <option value="">Auto-Route (Akun dengan sisa ruang terbanyak)</option>
                 {accounts.map((acc) => (
                   <option key={acc.id} value={acc.id}>
+                    {acc.isLoginAccount ? "👤 Akun Login: " : "☁️ Akun Tambahan: "}
                     {acc.email} ({formatBytes(Number(acc.availableStorage))} tersisa)
                   </option>
                 ))}

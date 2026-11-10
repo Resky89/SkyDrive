@@ -8,6 +8,7 @@ import {
   exchangeCodeForTokens,
   getUserInfo,
   getStorageQuota,
+  refreshAccountAccessToken,
   isInvalidGrantError,
 } from "@/lib/google-drive";
 import { autoConnectPrimaryGoogleAccount } from "@/lib/auto-connect";
@@ -160,7 +161,8 @@ export const googleRouter = new Hono<Env>()
 
       const results = await Promise.allSettled(
         accounts.map(async (acc) => {
-          const quota = await getStorageQuota(acc.id);
+          // Explicit on-demand token refresh & quota sync triggered by Sinkron action
+          const quota = await getStorageQuota(acc.id, { forceRefresh: true });
           await db.storageAccount.update({
             where: { id: acc.id },
             data: {
