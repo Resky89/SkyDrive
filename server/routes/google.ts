@@ -41,7 +41,14 @@ export const googleRouter = new Hono<Env>()
     const state = c.req.query("state");
     const error = c.req.query("error");
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL ??
+      process.env.BETTER_AUTH_URL ??
+      (process.env.VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+        : process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : "http://localhost:3000");
 
     if (error || !code || !state) {
       return c.redirect(`${appUrl}/dashboard/accounts?error=oauth_denied`);
