@@ -130,10 +130,11 @@ export default function LoginPage() {
           {/* Email / Password Form */}
           <form onSubmit={handleEmailLogin} className="space-y-3.5">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">
+              <label htmlFor="email" className="text-xs font-semibold text-foreground">
                 Email Address
               </label>
               <Input
+                id="email"
                 type="email"
                 placeholder="name@example.com"
                 value={email}
@@ -145,11 +146,12 @@ export default function LoginPage() {
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-foreground">
+                <label htmlFor="password" className="text-xs font-semibold text-foreground">
                   Password
                 </label>
               </div>
               <Input
+                id="password"
                 type="password"
                 placeholder="••••••••"
                 value={password}

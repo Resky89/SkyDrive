@@ -126,10 +126,11 @@ export default function RegisterPage() {
 
           <form onSubmit={handleRegister} className="space-y-3.5">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">
+              <label htmlFor="register-name" className="text-xs font-semibold text-foreground">
                 Full Name
               </label>
               <Input
+                id="register-name"
                 type="text"
                 placeholder="Jane Doe"
                 value={name}
@@ -140,10 +141,11 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">
+              <label htmlFor="register-email" className="text-xs font-semibold text-foreground">
                 Email Address
               </label>
               <Input
+                id="register-email"
                 type="email"
                 placeholder="jane@example.com"
                 value={email}
@@ -154,10 +156,11 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">
+              <label htmlFor="register-password" className="text-xs font-semibold text-foreground">
                 Password
               </label>
               <Input
+                id="register-password"
                 type="password"
                 placeholder="At least 8 characters"
                 value={password}

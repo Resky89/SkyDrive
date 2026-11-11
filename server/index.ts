@@ -20,7 +20,7 @@ const ALLOWED_ORIGIN_SET = new Set(
     .map((url) => url!.replace(/\/$/, ""))
 );
 
-const isAllowedOrigin = (origin: string): boolean => {
+export const isAllowedOrigin = (origin: string): boolean => {
   if (!origin) return false;
   const cleanOrigin = origin.replace(/\/$/, "");
   if (ALLOWED_ORIGIN_SET.has(cleanOrigin)) return true;

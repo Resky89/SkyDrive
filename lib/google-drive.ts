@@ -2,7 +2,7 @@ import { google } from "googleapis";
 import { decrypt, encrypt } from "@/lib/encryption";
 import { db } from "@/lib/db";
 
-const SCOPES = [
+export const SCOPES = [
   "https://www.googleapis.com/auth/drive",
   "https://www.googleapis.com/auth/drive.file",
   "https://www.googleapis.com/auth/userinfo.email",
