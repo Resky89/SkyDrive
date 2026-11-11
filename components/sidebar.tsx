@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, memo } from "react";
+import { useState, useEffect, useMemo, useRef, memo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -16,7 +16,9 @@ import {
   Video,
   FileText,
   LucideIcon,
+  X,
 } from "lucide-react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { signOut, useSession } from "@/lib/auth-client";
 import { cn, getInitials, formatBytes } from "@/lib/utils";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -51,12 +53,30 @@ interface StorageCategoryItem {
   sizeBytes: number;
 }
 
-export const Sidebar = memo(function Sidebar() {
+interface SidebarProps {
+  className?: string;
+  onClose?: () => void;
+  isMobile?: boolean;
+}
+
+export const Sidebar = memo(function Sidebar({
+  className,
+  onClose,
+  isMobile = false,
+}: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
   const { t } = useLanguage();
   const [storageData, setStorageData] = useState<SidebarStorageData | null>(null);
+
+  // Auto close only when pathname actually changes AFTER mount (prevents immediate close on initial open)
+  const initialPathRef = useRef(pathname);
+  useEffect(() => {
+    if (isMobile && onClose && initialPathRef.current !== pathname) {
+      onClose();
+    }
+  }, [pathname, isMobile, onClose]);
 
   useEffect(() => {
     let isMounted = true;
@@ -151,10 +171,21 @@ export const Sidebar = memo(function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-card border-r border-border flex flex-col shrink-0 h-screen sticky top-0 z-30 select-none transition-colors duration-200 shadow-md">
+    <aside
+      className={cn(
+        "bg-card border-r border-border flex flex-col shrink-0 select-none transition-colors duration-200 shadow-md",
+        !isMobile && "hidden lg:flex w-64 h-screen sticky top-0 z-30",
+        isMobile && "w-full h-full border-none shadow-none overflow-y-auto",
+        className
+      )}
+    >
       {/* Brand Header */}
-      <div className="h-16 px-5 flex items-center gap-3 border-b border-border/70 shrink-0">
-        <Link href="/dashboard" className="flex items-center gap-3 min-w-0 group">
+      <div className="h-16 px-5 flex items-center justify-between border-b border-border/70 shrink-0">
+        <Link
+          href="/dashboard"
+          onClick={() => isMobile && onClose?.()}
+          className="flex items-center gap-3 min-w-0 group"
+        >
           <div className="size-9 rounded-xl bg-primary/10 border border-primary/25 flex items-center justify-center p-1.5 shadow-inner group-hover:scale-105 transition-transform">
             <Image
               src="/SkyDrive.svg"
@@ -173,6 +204,18 @@ export const Sidebar = memo(function Sidebar() {
             </span>
           </div>
         </Link>
+
+        {isMobile && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="size-8 text-muted-foreground hover:text-foreground"
+            aria-label="Close sidebar"
+          >
+            <X className="size-4" />
+          </Button>
+        )}
       </div>
 
       {/* Navigation List */}
@@ -191,6 +234,7 @@ export const Sidebar = memo(function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => isMobile && onClose?.()}
                 className={cn(
                   "flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all duration-200 group relative",
                   isActive
@@ -307,5 +351,32 @@ export const Sidebar = memo(function Sidebar() {
         </div>
       </div>
     </aside>
+  );
+});
+
+interface MobileSidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export const MobileSidebar = memo(function MobileSidebar({
+  isOpen,
+  onClose,
+}: MobileSidebarProps) {
+  return (
+    <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay
+          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs transition-opacity duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+        />
+        <DialogPrimitive.Content
+          aria-describedby={undefined}
+          className="fixed inset-y-0 left-0 z-[101] h-full w-[290px] max-w-[85vw] bg-card p-0 shadow-2xl border-r border-border outline-none transition-transform duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left flex flex-col"
+        >
+          <DialogPrimitive.Title className="sr-only">Navigasi Dashboard</DialogPrimitive.Title>
+          <Sidebar isMobile onClose={onClose} />
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 });

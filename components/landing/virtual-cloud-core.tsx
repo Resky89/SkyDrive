@@ -203,7 +203,7 @@ export const VirtualCloudCore = memo(function VirtualCloudCore() {
   };
 
   return (
-    <SpotlightCard className="p-6 sm:p-8 border border-border/80 shadow-2xl font-sans">
+    <SpotlightCard className="p-4 sm:p-7 lg:p-8 border border-border/80 shadow-2xl font-sans">
       {/* Subtle ambient lighting */}
       <div className="absolute -top-16 -right-16 size-48 rounded-full bg-sky-500/10 blur-3xl pointer-events-none" />
       <div className="absolute -bottom-16 -left-16 size-48 rounded-full bg-indigo-600/10 blur-3xl pointer-events-none" />
@@ -279,7 +279,7 @@ export const VirtualCloudCore = memo(function VirtualCloudCore() {
       </div>
 
       {/* ── 2. Unified Virtual Storage Pool Overview ── */}
-      <div className="rounded-2xl bg-secondary/30 border border-border/70 p-5 mb-6 space-y-4 relative z-10">
+      <div className="rounded-2xl bg-secondary/30 border border-border/70 p-3.5 sm:p-5 mb-6 space-y-4 relative z-10">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="size-11 rounded-2xl bg-primary/10 border border-primary/25 flex items-center justify-center p-2 shadow-inner shrink-0">

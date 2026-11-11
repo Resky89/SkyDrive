@@ -38,15 +38,15 @@ export const SecurityArchitecture = memo(function SecurityArchitecture() {
       </div>
 
       {/* ── Interactive Architecture Card ── */}
-      <SpotlightCard className="p-6 sm:p-9 border border-border/80 relative overflow-hidden shadow-2xl">
+      <SpotlightCard className="p-4 sm:p-7 lg:p-9 border border-border/80 relative overflow-hidden shadow-2xl">
         {/* Navigation Tabs */}
-        <div className="flex flex-wrap items-center justify-between pb-6 mb-8 border-b border-border/60 gap-4">
-          <div className="flex items-center gap-2 p-1 rounded-xl bg-secondary/80 border border-border">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-8 border-b border-border/60 gap-4">
+          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-secondary/80 border border-border overflow-x-auto max-w-full">
             <button
               type="button"
               onClick={() => setActiveTab("data-plane")}
               className={cn(
-                "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5",
+                "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 shrink-0",
                 activeTab === "data-plane"
                   ? "bg-card text-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
@@ -59,7 +59,7 @@ export const SecurityArchitecture = memo(function SecurityArchitecture() {
               type="button"
               onClick={() => setActiveTab("token-vault")}
               className={cn(
-                "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5",
+                "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 shrink-0",
                 activeTab === "token-vault"
                   ? "bg-card text-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
@@ -72,7 +72,7 @@ export const SecurityArchitecture = memo(function SecurityArchitecture() {
               type="button"
               onClick={() => setActiveTab("comparison")}
               className={cn(
-                "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5",
+                "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 shrink-0",
                 activeTab === "comparison"
                   ? "bg-card text-foreground shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
@@ -83,7 +83,7 @@ export const SecurityArchitecture = memo(function SecurityArchitecture() {
             </button>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-500">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-500 self-start sm:self-auto">
             <span className="size-2 rounded-full bg-emerald-500 shadow-xs" />
             <span>{t.secProtectionBadge}</span>
           </div>

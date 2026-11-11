@@ -148,7 +148,7 @@ export default function ConnectedAccountsPage() {
 
   return (
     <div className="flex-1 flex flex-col min-w-0 pb-16">
-      <main className="px-6 sm:px-8 py-7 max-w-6xl w-full mx-auto space-y-6">
+      <main className="px-3.5 sm:px-6 lg:px-8 py-5 sm:py-7 max-w-6xl w-full mx-auto space-y-6">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -158,7 +158,7 @@ export default function ConnectedAccountsPage() {
                 {t.accountsTag}
               </span>
             </div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground">
               {t.accountsTitle}
             </h1>
             <p className="text-xs text-muted-foreground mt-1">
@@ -166,7 +166,7 @@ export default function ConnectedAccountsPage() {
             </p>
           </div>
 
-          <Button asChild size="sm" className="gap-1.5 shadow-md font-semibold">
+          <Button asChild size="sm" className="gap-1.5 shadow-md font-semibold w-full sm:w-auto">
             <Link href="/api/google/connect">
               <Plus className="size-3.5" />
               <span>{t.accountsConnectBtn}</span>

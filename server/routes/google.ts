@@ -1,7 +1,10 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "@hono/zod-validator";
+import { getCookie, setCookie, deleteCookie } from "hono/cookie";
+import crypto from "crypto";
 import { db } from "@/lib/db";
+import { auth } from "@/lib/auth";
 import { encrypt } from "@/lib/encryption";
 import {
   getAuthorizationUrl,
@@ -14,6 +17,59 @@ import {
 import { autoConnectPrimaryGoogleAccount } from "@/lib/auto-connect";
 import { authMiddleware, type Env } from "../middleware/auth";
 
+interface OAuthStatePayload {
+  userId: string;
+  email?: string;
+  nonce: string;
+  ts: number;
+}
+
+function getOAuthSigningSecret(): string {
+  const secret = process.env.ENCRYPTION_KEY || process.env.BETTER_AUTH_SECRET;
+  if (!secret && process.env.NODE_ENV === "production") {
+    throw new Error("Missing ENCRYPTION_KEY or BETTER_AUTH_SECRET in production.");
+  }
+  return secret || "skydrive-oauth-state-signing-fallback";
+}
+
+export function signOAuthState(payload: OAuthStatePayload): string {
+  const secret = getOAuthSigningSecret();
+  const data = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const signature = crypto.createHmac("sha256", secret).update(data).digest("base64url");
+  return `${data}.${signature}`;
+}
+
+export function verifyAndParseOAuthState(signedState: string): OAuthStatePayload | null {
+  try {
+    const parts = signedState.split(".");
+    if (parts.length !== 2) return null;
+    const [data, signature] = parts;
+    if (!data || !signature) return null;
+
+    const secret = getOAuthSigningSecret();
+    const expectedSig = crypto.createHmac("sha256", secret).update(data).digest("base64url");
+
+    const sigBuf = Buffer.from(signature);
+    const expBuf = Buffer.from(expectedSig);
+    if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
+      return null;
+    }
+
+    const json = Buffer.from(data, "base64url").toString("utf-8");
+    const payload = JSON.parse(json) as OAuthStatePayload;
+
+    // Check expiration (max 10 minutes)
+    const TEN_MINUTES_MS = 10 * 60 * 1000;
+    if (Date.now() - payload.ts > TEN_MINUTES_MS) {
+      return null;
+    }
+
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
 export const syncGoogleSchema = z.object({
   accountId: z.string().optional(),
 });
@@ -23,23 +79,41 @@ export const disconnectGoogleSchema = z.object({
 });
 
 export const googleRouter = new Hono<Env>()
-  // 1. Generate Google OAuth Connect URL
+  // 1. Generate Google OAuth Connect URL with CSRF Nonce & HMAC Signature
   .get("/connect", authMiddleware, async (c) => {
     const user = c.get("user");
     const email = c.req.query("email");
-    const state = Buffer.from(
-      JSON.stringify({ userId: user.id, email, ts: Date.now() })
-    ).toString("base64");
+    const nonce = crypto.randomBytes(24).toString("hex");
+
+    // Set secure HTTP-only cookie containing nonce
+    setCookie(c, "skydrive_oauth_nonce", nonce, {
+      path: "/",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "Lax",
+      maxAge: 600, // 10 minutes
+    });
+
+    const state = signOAuthState({
+      userId: user.id,
+      email,
+      nonce,
+      ts: Date.now(),
+    });
 
     const url = getAuthorizationUrl(state, email);
     return c.redirect(url);
   })
 
-  // 2. OAuth Callback
+  // 2. OAuth Callback with Anti-CSRF, Signature & Session Verification
   .get("/callback", async (c) => {
     const code = c.req.query("code");
     const state = c.req.query("state");
     const error = c.req.query("error");
+    const cookieNonce = getCookie(c, "skydrive_oauth_nonce");
+
+    // Clean up nonce cookie
+    deleteCookie(c, "skydrive_oauth_nonce", { path: "/" });
 
     const appUrl =
       process.env.NEXT_PUBLIC_APP_URL ??
@@ -54,8 +128,28 @@ export const googleRouter = new Hono<Env>()
       return c.redirect(`${appUrl}/dashboard/accounts?error=oauth_denied`);
     }
 
+    // A. Verify HMAC Signature and freshness
+    const parsedState = verifyAndParseOAuthState(state);
+    if (!parsedState) {
+      console.error("OAuth Callback Security Error: Invalid or expired state signature.");
+      return c.redirect(`${appUrl}/dashboard/accounts?error=invalid_state`);
+    }
+
+    // B. Verify Nonce against HttpOnly Cookie (Anti-CSRF)
+    if (!cookieNonce || cookieNonce !== parsedState.nonce) {
+      console.error("OAuth Callback Security Error: Nonce mismatch or missing cookie (CSRF detected).");
+      return c.redirect(`${appUrl}/dashboard/accounts?error=csrf_detected`);
+    }
+
+    // C. Verify Active Session matches State User ID
+    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    if (!session?.user || session.user.id !== parsedState.userId) {
+      console.error("OAuth Callback Security Error: Active session does not match state userId.");
+      return c.redirect(`${appUrl}/dashboard/accounts?error=session_mismatch`);
+    }
+
     try {
-      const { userId } = JSON.parse(Buffer.from(state, "base64").toString());
+      const { userId } = parsedState;
 
       // Exchange code for tokens
       const tokens = await exchangeCodeForTokens(code);

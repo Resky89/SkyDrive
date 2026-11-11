@@ -47,6 +47,120 @@ export async function exchangeCodeForTokens(code: string) {
   return tokens;
 }
 
+export async function getValidAccessToken(storageAccountId: string): Promise<string> {
+  const account = await db.storageAccount.findUnique({
+    where: { id: storageAccountId },
+  });
+  if (!account) throw new Error("Storage account not found");
+
+  const oauth2Client = createOAuth2Client();
+  let accessToken = "";
+  if (account.accessTokenEnc) {
+    try {
+      accessToken = decrypt(account.accessTokenEnc);
+    } catch (e) {
+      console.warn("Failed to decrypt accessTokenEnc:", e);
+    }
+  }
+  let refreshToken = "";
+  if (account.refreshTokenEnc) {
+    try {
+      refreshToken = decrypt(account.refreshTokenEnc);
+    } catch (e) {
+      console.warn("Failed to decrypt refreshTokenEnc:", e);
+    }
+  }
+
+  oauth2Client.setCredentials({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    expiry_date: account.tokenExpiresAt?.getTime(),
+  });
+
+  oauth2Client.on("tokens", async (newTokens) => {
+    if (newTokens.access_token) {
+      await db.storageAccount
+        .update({
+          where: { id: storageAccountId },
+          data: {
+            accessTokenEnc: encrypt(newTokens.access_token),
+            refreshTokenEnc: newTokens.refresh_token
+              ? encrypt(newTokens.refresh_token)
+              : undefined,
+            tokenExpiresAt: newTokens.expiry_date
+              ? new Date(newTokens.expiry_date)
+              : undefined,
+          },
+        })
+        .catch((e) => console.error("Error saving refreshed token:", e));
+    }
+  });
+
+  const res = await oauth2Client.getAccessToken();
+  if (!res.token) {
+    throw new Error("Could not acquire a valid Google access token");
+  }
+  return res.token;
+}
+
+export async function createResumableUploadSession(
+  storageAccountId: string,
+  params: {
+    name: string;
+    mimeType: string;
+    size?: number;
+    parentFolderId?: string;
+    origin?: string;
+  }
+): Promise<{ uploadUrl: string; storageAccountId: string }> {
+  const token = await getValidAccessToken(storageAccountId);
+
+  const requestBody: { name: string; mimeType: string; parents?: string[] } = {
+    name: params.name,
+    mimeType: params.mimeType || "application/octet-stream",
+  };
+  if (params.parentFolderId && params.parentFolderId !== "root") {
+    requestBody.parents = [params.parentFolderId];
+  }
+
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json; charset=UTF-8",
+    "X-Upload-Content-Type": params.mimeType || "application/octet-stream",
+  };
+
+  if (params.size && params.size > 0) {
+    headers["X-Upload-Content-Length"] = params.size.toString();
+  }
+
+  if (params.origin) {
+    headers["Origin"] = params.origin;
+  }
+
+  const res = await fetch(
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable",
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify(requestBody),
+    }
+  );
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(
+      `Google Drive Resumable Session init failed (${res.status}): ${errorText}`
+    );
+  }
+
+  const uploadUrl = res.headers.get("location");
+  if (!uploadUrl) {
+    throw new Error("Google Drive did not return a resumable upload location.");
+  }
+
+  return { uploadUrl, storageAccountId };
+}
+
 export async function getGoogleDriveClient(storageAccountId: string) {
   const account = await db.storageAccount.findUnique({
     where: { id: storageAccountId },

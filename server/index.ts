@@ -7,6 +7,33 @@ import { googleRouter } from "./routes/google";
 import { storageRouter } from "./routes/storage";
 import { userRouter } from "./routes/user";
 
+// Whitelist of allowed origins for CORS
+const ALLOWED_ORIGIN_SET = new Set(
+  [
+    "https://skydrive.web.id",
+    "http://localhost:3000",
+    "http://localhost:3001",
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.BETTER_AUTH_URL,
+  ]
+    .filter(Boolean)
+    .map((url) => url!.replace(/\/$/, ""))
+);
+
+const isAllowedOrigin = (origin: string): boolean => {
+  if (!origin) return false;
+  const cleanOrigin = origin.replace(/\/$/, "");
+  if (ALLOWED_ORIGIN_SET.has(cleanOrigin)) return true;
+  // Allow official Vercel preview deployments for this project
+  if (
+    cleanOrigin.endsWith(".vercel.app") &&
+    (cleanOrigin.includes("skydrive") || cleanOrigin.includes("resky89"))
+  ) {
+    return true;
+  }
+  return false;
+};
+
 // Create root Hono instance with /api basePath
 const app = new Hono()
   .basePath("/api")
@@ -14,7 +41,7 @@ const app = new Hono()
   .use(
     "*",
     cors({
-      origin: (origin) => origin || "*",
+      origin: (origin) => (isAllowedOrigin(origin) ? origin : null),
       allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowHeaders: ["Content-Type", "Authorization", "Cookie"],
       credentials: true,

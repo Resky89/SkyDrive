@@ -106,7 +106,7 @@ export function SkyDriveFooter({
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.1 }}
-        className="px-8 pt-12 pb-0 sm:px-12 sm:pt-16 lg:px-16 xl:px-20"
+        className="px-5 sm:px-12 pt-10 pb-0 sm:pt-16 lg:px-16 xl:px-20"
       >
         <div className="mx-auto flex max-w-6xl flex-col justify-between gap-10 lg:flex-row lg:gap-16 xl:gap-20">
           {/* Brand column */}
@@ -178,7 +178,7 @@ export function SkyDriveFooter({
           <motion.nav
             variants={navStagger}
             aria-label="Footer navigation"
-            className="grid w-full max-w-[560px] grid-cols-2 gap-y-10 sm:grid-cols-4"
+            className="grid w-full max-w-[560px] grid-cols-2 gap-8 sm:grid-cols-3"
           >
             {columns.map((col) => (
               <motion.div key={col.id} variants={riseItem}>

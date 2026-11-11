@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -11,6 +12,8 @@ import {
   UserCheck,
   Layers,
   Search,
+  Menu,
+  X,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
@@ -38,6 +41,7 @@ interface LandingViewProps {
 
 export function LandingView({ user }: LandingViewProps) {
   const { t, language } = useLanguage();
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   return (
     <SmoothScrollProvider>
@@ -49,8 +53,8 @@ export function LandingView({ user }: LandingViewProps) {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[350px] bg-gradient-to-b from-primary/15 via-sky-500/10 to-transparent blur-3xl rounded-full pointer-events-none -z-10" />
 
         {/* ── Fixed Floating Glass AppBar ── */}
-        <header className="sticky top-0 z-40 w-full px-4 sm:px-8 py-3.5 transition-all">
-          <div className="max-w-7xl mx-auto rounded-2xl glass-pill px-5 sm:px-6 h-14 flex items-center justify-between border border-border/80 shadow-lg shadow-black/[0.03]">
+        <header className="sticky top-0 z-40 w-full px-3 sm:px-8 py-3 transition-all">
+          <div className="max-w-7xl mx-auto rounded-2xl glass-pill px-4 sm:px-6 h-14 flex items-center justify-between border border-border/80 shadow-lg shadow-black/[0.03]">
             {/* Left: Official SkyDrive Logo */}
             <div className="flex items-center gap-3">
               <Link
@@ -63,12 +67,12 @@ export function LandingView({ user }: LandingViewProps) {
                   width={130}
                   height={30}
                   priority
-                  className="h-7 w-auto object-contain"
+                  className="h-6 sm:h-7 w-auto object-contain"
                 />
               </Link>
             </div>
 
-            {/* Center: Navigation Anchors */}
+            {/* Center: Navigation Anchors (Desktop) */}
             <nav className="hidden lg:flex items-center gap-7 text-sm font-medium text-muted-foreground">
               <a
                 href="#how-it-works"
@@ -102,15 +106,17 @@ export function LandingView({ user }: LandingViewProps) {
               </a>
             </nav>
 
-            {/* Right: Controls, Language Switcher, Theme & Auth */}
-            <div className="flex items-center gap-2">
-              <LanguageSwitcher variant="pill" />
-              <ThemeToggle />
+            {/* Right: Controls, Language Switcher, Theme & Auth (Desktop & Mobile trigger) */}
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="hidden sm:flex items-center gap-1.5">
+                <LanguageSwitcher variant="pill" />
+                <ThemeToggle />
+              </div>
 
               {user ? (
                 <Link
                   href="/dashboard"
-                  className="flex items-center gap-2 pl-2 pr-3.5 py-1 rounded-full bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-all group cursor-pointer shadow-xs ml-1"
+                  className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 pr-2.5 sm:pr-3.5 py-1 rounded-full bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-all group cursor-pointer shadow-xs"
                 >
                   <Avatar className="size-6 border border-primary/30">
                     {user.image && (
@@ -124,32 +130,107 @@ export function LandingView({ user }: LandingViewProps) {
                       {user.name ? getInitials(user.name) : "SD"}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                  <span className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors hidden xs:inline">
                     {t.navDashboard}
                   </span>
                   <ChevronRight className="size-3 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
                 </Link>
               ) : (
-                <div className="flex items-center gap-2 ml-1">
+                <div className="hidden sm:flex items-center gap-2">
                   <Button
                     asChild
                     variant="ghost"
                     size="sm"
-                    className="text-xs h-8.5 font-medium"
+                    className="text-xs h-8.5 font-medium px-3"
                   >
                     <Link href="/login">{t.navLogin}</Link>
                   </Button>
                   <Button
                     asChild
                     size="sm"
-                    className="text-xs h-8.5 font-semibold px-4 shadow-xs"
+                    className="text-xs h-8.5 font-semibold px-3.5 shadow-xs"
                   >
                     <Link href="/register">{t.navRegister}</Link>
                   </Button>
                 </div>
               )}
+
+              {/* Mobile Hamburger Menu Button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
+                className="lg:hidden size-9 text-muted-foreground hover:text-foreground shrink-0"
+                aria-label="Toggle navigation menu"
+              >
+                {isMobileNavOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+              </Button>
             </div>
           </div>
+
+          {/* ── Mobile Navigation Drawer ── */}
+          {isMobileNavOpen && (
+            <div className="lg:hidden max-w-7xl mx-auto mt-2 rounded-2xl bg-card/95 backdrop-blur-xl border border-border p-5 shadow-2xl space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+              <nav className="flex flex-col space-y-2 text-sm font-medium">
+                <a
+                  href="#how-it-works"
+                  onClick={() => setIsMobileNavOpen(false)}
+                  className="px-3 py-2 rounded-xl hover:bg-secondary/70 text-foreground transition-colors"
+                >
+                  {t.navHowItWorks}
+                </a>
+                <a
+                  href="#features"
+                  onClick={() => setIsMobileNavOpen(false)}
+                  className="px-3 py-2 rounded-xl hover:bg-secondary/70 text-foreground transition-colors"
+                >
+                  {t.navFeatures}
+                </a>
+                <a
+                  href="#calculator"
+                  onClick={() => setIsMobileNavOpen(false)}
+                  className="px-3 py-2 rounded-xl hover:bg-secondary/70 text-foreground transition-colors"
+                >
+                  {t.navCalculator}
+                </a>
+                <a
+                  href="#security"
+                  onClick={() => setIsMobileNavOpen(false)}
+                  className="px-3 py-2 rounded-xl hover:bg-secondary/70 text-foreground transition-colors"
+                >
+                  {t.navSecurity}
+                </a>
+                <a
+                  href="#faq"
+                  onClick={() => setIsMobileNavOpen(false)}
+                  className="px-3 py-2 rounded-xl hover:bg-secondary/70 text-foreground transition-colors"
+                >
+                  {t.navFaq}
+                </a>
+              </nav>
+
+              <div className="pt-3 border-t border-border flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <LanguageSwitcher variant="pill" />
+                  <ThemeToggle />
+                </div>
+                {!user && (
+                  <div className="flex items-center gap-2">
+                    <Button asChild variant="ghost" size="sm" className="text-xs h-8">
+                      <Link href="/login" onClick={() => setIsMobileNavOpen(false)}>
+                        {t.navLogin}
+                      </Link>
+                    </Button>
+                    <Button asChild size="sm" className="text-xs h-8 px-3">
+                      <Link href="/register" onClick={() => setIsMobileNavOpen(false)}>
+                        {t.navRegister}
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </header>
 
         <main className="flex-1 space-y-20 sm:space-y-28 relative z-10">
@@ -157,26 +238,26 @@ export function LandingView({ user }: LandingViewProps) {
           <section className="relative px-4 sm:px-8 pt-10 sm:pt-16 pb-6 max-w-7xl mx-auto text-center">
             {/* High-Impact Master Headline */}
             <div className="max-w-4xl mx-auto space-y-4">
-              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-foreground leading-[1.08]">
+              <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-foreground leading-[1.15] sm:leading-[1.08] break-words">
                 {t.heroTitlePart1}{" "}
                 <span className="brand-text-gradient">{t.heroTitlePart2}</span>{" "}
                 {t.heroTitlePart3}
               </h1>
 
               {/* Precise Subtitle */}
-              <p className="text-base sm:text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto pt-2">
+              <p className="text-sm sm:text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto pt-2 px-2">
                 {t.heroSubtitle}
               </p>
             </div>
 
             {/* Action CTAs */}
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3.5">
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-sm sm:max-w-none mx-auto">
               {user ? (
                 <>
                   <Button
                     asChild
                     size="lg"
-                    className="h-12 px-8 text-sm font-semibold gap-2 shadow-md"
+                    className="h-12 w-full sm:w-auto px-8 text-sm font-semibold gap-2 shadow-md"
                   >
                     <Link href="/dashboard">
                       {t.heroCtaDashboard}
@@ -187,7 +268,7 @@ export function LandingView({ user }: LandingViewProps) {
                     asChild
                     variant="outline"
                     size="lg"
-                    className="h-12 px-6 text-sm font-medium border-border/80"
+                    className="h-12 w-full sm:w-auto px-6 text-sm font-medium border-border/80"
                   >
                     <Link href="/dashboard/accounts">{t.heroCtaManage}</Link>
                   </Button>
@@ -197,7 +278,7 @@ export function LandingView({ user }: LandingViewProps) {
                   <Button
                     asChild
                     size="lg"
-                    className="h-12 px-8 text-sm font-semibold gap-2 shadow-md bg-foreground text-background hover:bg-foreground/90 transition-all"
+                    className="h-12 w-full sm:w-auto px-8 text-sm font-semibold gap-2 shadow-md bg-foreground text-background hover:bg-foreground/90 transition-all"
                   >
                     <Link href="/register">
                       {t.heroCtaPrimary}
@@ -208,7 +289,7 @@ export function LandingView({ user }: LandingViewProps) {
                     asChild
                     variant="outline"
                     size="lg"
-                    className="h-12 px-6 text-sm font-medium border-border/80 bg-card/50 hover:bg-accent transition-colors"
+                    className="h-12 w-full sm:w-auto px-6 text-sm font-medium border-border/80 bg-card/50 hover:bg-accent transition-colors"
                   >
                     <Link href="/login">{t.heroCtaSecondary}</Link>
                   </Button>

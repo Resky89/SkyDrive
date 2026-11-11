@@ -59,7 +59,7 @@ interface StorageAnalyticsData {
 function DashboardOverviewSkeleton() {
   return (
     <div className="flex-1 flex flex-col min-w-0 pb-16 animate-pulse">
-      <main className="px-6 sm:px-8 py-7 max-w-6xl w-full mx-auto space-y-7">
+      <main className="px-3.5 sm:px-6 lg:px-8 py-5 sm:py-7 max-w-6xl w-full mx-auto space-y-6 sm:space-y-7">
         {/* Page Heading Skeleton */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-2">
@@ -230,7 +230,7 @@ export default function DashboardOverviewPage() {
 
   return (
     <div className="flex-1 flex flex-col min-w-0 pb-16">
-      <main className="px-6 sm:px-8 py-7 max-w-6xl w-full mx-auto space-y-7">
+      <main className="px-3.5 sm:px-6 lg:px-8 py-5 sm:py-7 max-w-6xl w-full mx-auto space-y-6 sm:space-y-7">
         {/* Page heading */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-card-in">
           <div>
@@ -240,7 +240,7 @@ export default function DashboardOverviewPage() {
                 {t.overviewTag}
               </span>
             </div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground">
               {t.overviewTitle}
             </h1>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -248,14 +248,14 @@ export default function DashboardOverviewPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <Button asChild variant="outline" size="sm" className="gap-1.5 shadow-sm border-border/80 bg-card/80">
+          <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
+            <Button asChild variant="outline" size="sm" className="gap-1.5 shadow-sm border-border/80 bg-card/80 flex-1 sm:flex-none">
               <Link href="/dashboard/accounts">
                 <Plus className="size-3.5" />
                 <span>{t.overviewLinkBtn}</span>
               </Link>
             </Button>
-            <Button asChild size="sm" className="gap-1.5 shadow-md font-semibold">
+            <Button asChild size="sm" className="gap-1.5 shadow-md font-semibold flex-1 sm:flex-none">
               <Link href="/dashboard/uploads">
                 <UploadCloud className="size-3.5" />
                 <span>{t.overviewUploadBtn}</span>
@@ -266,7 +266,7 @@ export default function DashboardOverviewPage() {
 
         {/* Hero Storage Card with Spotlight */}
         <SpotlightCard
-          className="p-6 sm:p-7 border-border/80 shadow-xl space-y-6 relative overflow-hidden animate-card-in transition-colors duration-150"
+          className="p-4 sm:p-7 border-border/80 shadow-xl space-y-6 relative overflow-hidden animate-card-in transition-colors duration-150"
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
             <div className="space-y-1">

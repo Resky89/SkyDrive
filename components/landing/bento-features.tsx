@@ -70,7 +70,7 @@ export const BentoFeatures = memo(function BentoFeatures() {
       {/* Top Row: 2 Col Asymmetric (60% / 40%) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Card 1 (7 Cols): Smart Ingestion Engine */}
-        <SpotlightCard className="lg:col-span-7 p-6 sm:p-8 flex flex-col justify-between">
+        <SpotlightCard className="lg:col-span-7 p-4 sm:p-7 lg:p-8 flex flex-col justify-between">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="size-10 rounded-2xl bg-gradient-to-br from-sky-500/20 to-blue-600/20 border border-primary/30 flex items-center justify-center text-primary shadow-inner">
@@ -91,7 +91,7 @@ export const BentoFeatures = memo(function BentoFeatures() {
               <span>{t.bento1ModeLabel}</span>
               <span className="text-primary font-semibold uppercase">{activeStrategy}</span>
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {strategies.map((s) => (
                 <button
                   key={s.id}
@@ -112,7 +112,7 @@ export const BentoFeatures = memo(function BentoFeatures() {
         </SpotlightCard>
 
         {/* Card 2 (5 Cols): Zero-Exposure Security */}
-        <SpotlightCard className="lg:col-span-5 p-6 sm:p-8 flex flex-col justify-between">
+        <SpotlightCard className="lg:col-span-5 p-4 sm:p-7 lg:p-8 flex flex-col justify-between">
           <div className="space-y-3">
             <div className="size-10 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-500 shadow-inner">
               <ShieldCheck className="size-5" />
@@ -140,7 +140,7 @@ export const BentoFeatures = memo(function BentoFeatures() {
       {/* Bottom Row: 2 Col Asymmetric (40% / 60%) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Card 3 (5 Cols): Real-time Storage Telemetry */}
-        <SpotlightCard className="lg:col-span-5 p-6 sm:p-8 flex flex-col justify-between">
+        <SpotlightCard className="lg:col-span-5 p-4 sm:p-7 lg:p-8 flex flex-col justify-between">
           <div className="space-y-3">
             <div className="size-10 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-sky-500/20 border border-primary/30 flex items-center justify-center text-primary shadow-inner">
               <BarChart2 className="size-5" />
@@ -179,7 +179,7 @@ export const BentoFeatures = memo(function BentoFeatures() {
         </SpotlightCard>
 
         {/* Card 4 (7 Cols): Cross-Account File Explorer */}
-        <SpotlightCard className="lg:col-span-7 p-6 sm:p-8 flex flex-col justify-between">
+        <SpotlightCard className="lg:col-span-7 p-4 sm:p-7 lg:p-8 flex flex-col justify-between">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="size-10 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-sky-600/20 border border-primary/30 flex items-center justify-center text-primary shadow-inner">
@@ -205,11 +205,11 @@ export const BentoFeatures = memo(function BentoFeatures() {
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <Icon className={cn("size-4 shrink-0", file.color)} />
-                    <span className="text-foreground font-medium truncate max-w-[200px] sm:max-w-[280px]">
+                    <span className="text-foreground font-medium truncate max-w-[140px] xs:max-w-[200px] sm:max-w-[320px]">
                       {file.name}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 text-muted-foreground shrink-0 text-[11px]">
+                  <div className="flex items-center gap-2 sm:gap-3 text-muted-foreground shrink-0 text-[11px]">
                     <span className="hidden sm:inline px-2 py-0.5 rounded-lg bg-secondary/60 border border-border/50 text-[10px]">
                       {file.drive}
                     </span>

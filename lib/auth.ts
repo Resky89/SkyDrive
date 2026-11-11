@@ -10,8 +10,18 @@ const getBaseUrl = () => {
   return "http://localhost:3000";
 };
 
+const getAuthSecret = () => {
+  const secret = process.env.BETTER_AUTH_SECRET;
+  if (!secret && process.env.NODE_ENV === "production") {
+    throw new Error(
+      "FATAL: BETTER_AUTH_SECRET is not configured in production environment variables."
+    );
+  }
+  return secret || "skydrive-dev-only-secret-key-min-32-chars-long";
+};
+
 export const auth = betterAuth({
-  secret: process.env.BETTER_AUTH_SECRET || "skydrive-default-super-secret-key-32-chars-min",
+  secret: getAuthSecret(),
   baseURL: getBaseUrl(),
   database: prismaAdapter(db, {
     provider: "mysql",

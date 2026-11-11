@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { Particles } from "@/components/ui/particles";
 
 export default async function DashboardLayout({
@@ -28,9 +29,11 @@ export default async function DashboardLayout({
       {/* Main App Canvas: Fixed Top AppBar with stable scrolling content */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden relative z-10">
         <Header />
-        <div className="flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden scrollbar-stable">
+        <div className="flex-1 flex flex-col min-w-0 overflow-y-auto overflow-x-hidden scrollbar-stable pb-20 lg:pb-0">
           {children}
         </div>
+        {/* Mobile Sticky Bottom Navigation */}
+        <MobileBottomNav />
       </div>
     </div>
   );

@@ -3,11 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Sparkles, RefreshCw, UploadCloud } from "lucide-react";
+import { Sparkles, RefreshCw, UploadCloud, Menu, Search } from "lucide-react";
 import { GlobalSearchDialog } from "@/components/global-search-dialog";
 import { QuickUploadModal } from "@/components/quick-upload-modal";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { MobileSidebar } from "@/components/sidebar";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useSession } from "@/lib/auth-client";
@@ -24,6 +25,7 @@ export function Header({ accounts: initialAccounts, onRefresh }: HeaderProps) {
   const { data: session } = useSession();
   const { t } = useLanguage();
   const [mounted, setMounted] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -59,6 +61,22 @@ export function Header({ accounts: initialAccounts, onRefresh }: HeaderProps) {
     window.addEventListener("skydrive:refresh", handleRefresh);
     return () => window.removeEventListener("skydrive:refresh", handleRefresh);
   }, [fetchAccounts]);
+
+  useEffect(() => {
+    const handleToggle = () => setIsMobileMenuOpen((prev) => !prev);
+    const handleOpen = () => setIsMobileMenuOpen(true);
+    const handleClose = () => setIsMobileMenuOpen(false);
+
+    window.addEventListener("skydrive:toggle-sidebar", handleToggle);
+    window.addEventListener("skydrive:open-sidebar", handleOpen);
+    window.addEventListener("skydrive:close-sidebar", handleClose);
+
+    return () => {
+      window.removeEventListener("skydrive:toggle-sidebar", handleToggle);
+      window.removeEventListener("skydrive:open-sidebar", handleOpen);
+      window.removeEventListener("skydrive:close-sidebar", handleClose);
+    };
+  }, []);
 
   const handleSyncAll = async () => {
     setIsSyncing(true);
@@ -96,39 +114,53 @@ export function Header({ accounts: initialAccounts, onRefresh }: HeaderProps) {
 
   return (
     <>
-      <header className="h-16 border-b border-border px-6 flex items-center justify-between bg-card sticky top-0 z-20 shadow-xs transition-colors duration-200 gap-4 shrink-0 w-full">
-        {/* Logo (visible only on mobile where sidebar is hidden) */}
-        <Link href="/dashboard" className="shrink-0 lg:hidden flex items-center gap-2">
-          <Image
-            src="/SkyDrive.svg"
-            alt="SkyDrive"
-            width={28}
-            height={28}
-            className="h-7 w-auto object-contain"
-          />
-          <span className="font-bold text-sm brand-text-gradient">
-            SkyDrive
-          </span>
-        </Link>
+      <header className="h-16 border-b border-border px-3 sm:px-6 flex items-center justify-between bg-card sticky top-0 z-20 shadow-xs transition-colors duration-200 gap-2 sm:gap-4 shrink-0 w-full">
+        {/* Left Section: Mobile Hamburger Toggle + Brand on Mobile */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="lg:hidden size-9 text-muted-foreground hover:text-foreground shrink-0"
+            aria-label="Open mobile menu"
+          >
+            <Menu className="size-5" />
+          </Button>
+
+          <Link href="/dashboard" className="shrink-0 lg:hidden flex items-center gap-2">
+            <Image
+              src="/SkyDrive.svg"
+              alt="SkyDrive"
+              width={28}
+              height={28}
+              className="h-7 w-auto object-contain"
+            />
+            <span className="font-bold text-sm brand-text-gradient hidden xs:inline">
+              SkyDrive
+            </span>
+          </Link>
+        </div>
 
         {/* Global Search Bar Trigger */}
         <button
           onClick={() => setIsSearchOpen(true)}
-          className="flex items-center gap-3 px-3.5 py-1.5 rounded-xl bg-muted/60 border border-border text-muted-foreground hover:text-foreground hover:border-border/80 transition-all text-xs w-64 sm:w-72 justify-between group shadow-sm cursor-pointer flex-1 max-w-sm"
+          className="flex items-center gap-2 sm:gap-3 px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-muted/60 border border-border text-muted-foreground hover:text-foreground hover:border-border/80 transition-all text-xs justify-between group shadow-sm cursor-pointer flex-1 max-w-xs sm:max-w-sm"
         >
-          <div className="flex items-center gap-2">
-            <Sparkles className="size-3.5 text-primary group-hover:scale-110 transition-transform" />
+          <div className="flex items-center gap-2 truncate">
+            <Sparkles className="size-3.5 text-primary group-hover:scale-110 transition-transform shrink-0" />
             <span className="truncate">{t.headerSearch}</span>
           </div>
-          <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-card border border-border text-muted-foreground">
+          <kbd className="hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded bg-card border border-border text-muted-foreground shrink-0">
             ⌘K
           </kbd>
         </button>
 
         {/* Action Controls & User Profile */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           {/* Language Switcher */}
-          <LanguageSwitcher variant="pill" />
+          <div className="hidden sm:block">
+            <LanguageSwitcher variant="pill" />
+          </div>
 
           {/* Light / Dark Mode Toggle */}
           <ThemeToggle />
@@ -139,27 +171,28 @@ export function Header({ accounts: initialAccounts, onRefresh }: HeaderProps) {
             size="sm"
             onClick={handleSyncAll}
             disabled={isSyncing}
-            className="gap-1.5 text-xs font-medium shadow-sm"
+            className="gap-1.5 text-xs font-medium shadow-sm px-2.5 sm:px-3"
+            title={t.headerSync}
           >
             <RefreshCw className={cn("size-3.5", isSyncing && "animate-spin text-primary")} />
-            <span className="hidden sm:inline">{t.headerSync}</span>
+            <span className="hidden md:inline">{t.headerSync}</span>
           </Button>
 
           {/* Quick Upload Button */}
           <Button
             size="sm"
             onClick={() => setIsUploadOpen(true)}
-            className="gap-1.5 text-xs font-semibold shadow-sm"
+            className="gap-1.5 text-xs font-semibold shadow-sm px-2.5 sm:px-3"
           >
             <UploadCloud className="size-3.5" />
-            <span>{t.headerUpload}</span>
+            <span className="hidden xs:inline">{t.headerUpload}</span>
           </Button>
 
           {/* User Profile Pill in Header */}
           {mounted && session?.user && (
             <Link
               href="/dashboard/profile"
-              className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full bg-muted/60 border border-border hover:bg-accent/60 hover:border-border/80 transition-all cursor-pointer shadow-sm ml-1"
+              className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 pr-2 sm:pr-3 py-1 rounded-full bg-muted/60 border border-border hover:bg-accent/60 hover:border-border/80 transition-all cursor-pointer shadow-sm ml-0.5"
               title="Open Profile"
             >
               <Avatar className="size-6">
@@ -181,6 +214,12 @@ export function Header({ accounts: initialAccounts, onRefresh }: HeaderProps) {
           )}
         </div>
       </header>
+
+      {/* Mobile Drawer Navigation */}
+      <MobileSidebar
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+      />
 
       {/* Global Multi-Account Search Dialog */}
       <GlobalSearchDialog isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />

@@ -6,21 +6,23 @@ export type UploadStrategy =
   | "least_used"
   | "balanced";
 
-type AccountWithStorage = Pick<
+export type AccountWithStorage = Pick<
   StorageAccount,
   "id" | "email" | "availableStorage" | "usedStorage" | "totalStorage" | "usagePercentage" | "isActive"
->;
+> & {
+  displayName?: string | null;
+};
 
 /**
  * Select the best storage account based on the chosen strategy.
  * Always validates that the account has enough space for the file.
  */
-export function selectStorageAccount(
-  accounts: AccountWithStorage[],
+export function selectStorageAccount<T extends AccountWithStorage>(
+  accounts: T[],
   fileSizeBytes: bigint,
   strategy: UploadStrategy,
   manualAccountId?: string
-): AccountWithStorage | null {
+): T | null {
   // Filter only active accounts with enough storage
   const eligible = accounts.filter(
     (acc) => acc.isActive && acc.availableStorage >= fileSizeBytes

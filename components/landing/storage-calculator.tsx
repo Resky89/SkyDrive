@@ -48,11 +48,11 @@ export const StorageCalculator = memo(function StorageCalculator() {
       : `${totalPooledGB} GB`;
 
   return (
-    <SpotlightCard className="p-6 sm:p-10 border border-border/80 relative overflow-hidden shadow-2xl font-sans">
+    <SpotlightCard className="p-4 sm:p-8 lg:p-10 border border-border/80 relative overflow-hidden shadow-2xl font-sans">
       {/* ── Mode Switcher Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-6 mb-8 border-b border-border/60 gap-4 relative z-10">
         <div>
-          <h3 className="text-2xl sm:text-3xl font-bold text-foreground">
+          <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
             {activeMode === "fragmentation"
               ? "Masalah Akun Terpisah vs Solusi SkyDrive"
               : "Hitung Kapasitas & Penghematan Biaya"}
@@ -65,32 +65,32 @@ export const StorageCalculator = memo(function StorageCalculator() {
         </div>
 
         {/* Tab Toggle */}
-        <div className="flex items-center p-1 rounded-xl bg-secondary/80 border border-border shrink-0 self-start sm:self-auto">
+        <div className="grid grid-cols-2 sm:flex items-center p-1 rounded-xl bg-secondary/80 border border-border shrink-0 w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setActiveMode("fragmentation")}
             className={cn(
-              "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5",
+              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5",
               activeMode === "fragmentation"
                 ? "bg-card text-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <Split className="size-3.5" />
-            <span>{t.calcMode1Tab}</span>
+            <Split className="size-3.5 shrink-0" />
+            <span className="truncate">{t.calcMode1Tab}</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveMode("capacity-roi")}
             className={cn(
-              "px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5",
+              "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5",
               activeMode === "capacity-roi"
                 ? "bg-card text-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <DollarSign className="size-3.5" />
-            <span>{t.calcMode2Tab}</span>
+            <DollarSign className="size-3.5 shrink-0" />
+            <span className="truncate">{t.calcMode2Tab}</span>
           </button>
         </div>
       </div>

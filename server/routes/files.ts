@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { authMiddleware, type Env } from "../middleware/auth";
 import {
   uploadFileToDrive,
+  createResumableUploadSession,
   createFolderInDrive,
   deleteFileFromDrive,
   renameFileInDrive,
@@ -334,6 +335,93 @@ export const filesRouter = new Hono<Env>()
       })
     );
   })
+
+  // 1a. Initiate Direct-to-Google Resumable Upload (Bypasses Vercel 4.5MB limit & 0 RAM usage)
+  .post(
+    "/initiate-upload",
+    zValidator(
+      "json",
+      z.object({
+        name: z.string().min(1, "File name is required"),
+        size: z.number().nonnegative(),
+        mimeType: z.string().default("application/octet-stream"),
+        strategy: z.string().default("manual"),
+        accountId: z.string().optional(),
+        targetAccountId: z.string().optional(),
+        parentFolderId: z.string().optional(),
+      })
+    ),
+    async (c) => {
+      const user = c.get("user");
+      const {
+        name,
+        size,
+        mimeType,
+        strategy,
+        accountId,
+        targetAccountId,
+        parentFolderId,
+      } = c.req.valid("json");
+
+      let accounts = await db.storageAccount.findMany({
+        where: { userId: user.id, isActive: true },
+      });
+
+      if (accounts.length === 0) {
+        const autoConnected = await autoConnectPrimaryGoogleAccount(user.id);
+        if (autoConnected) {
+          accounts = await db.storageAccount.findMany({
+            where: { userId: user.id, isActive: true },
+          });
+        }
+      }
+
+      if (accounts.length === 0) {
+        return c.json({ error: "No connected storage accounts" }, 400);
+      }
+
+      const manualAccountId = accountId || targetAccountId;
+      const selectedAccount = selectStorageAccount(
+        accounts,
+        BigInt(size),
+        strategy as UploadStrategy,
+        manualAccountId ?? undefined
+      );
+
+      if (!selectedAccount) {
+        return c.json(
+          { error: "No account has enough storage for this file" },
+          400
+        );
+      }
+
+      try {
+        const session = await createResumableUploadSession(selectedAccount.id, {
+          name,
+          mimeType,
+          size,
+          parentFolderId,
+          origin: c.req.header("origin"),
+        });
+
+        return c.json({
+          uploadUrl: session.uploadUrl,
+          account: {
+            id: selectedAccount.id,
+            email: selectedAccount.email,
+            displayName: selectedAccount.displayName,
+          },
+        });
+      } catch (err: unknown) {
+        console.error("Direct Resumable Upload Init Error:", err);
+        const errMsg =
+          err instanceof Error
+            ? err.message
+            : "Failed to initiate direct upload session";
+        return c.json({ error: errMsg }, 500);
+      }
+    }
+  )
 
   // 1. Upload File
   .post("/upload", async (c) => {

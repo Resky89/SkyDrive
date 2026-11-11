@@ -110,6 +110,45 @@ export default function SmartUploadsPage() {
       const file = filesToUpload[i];
 
       try {
+        // 1. Direct-to-Google Resumable Upload (Bypasses Vercel 4.5MB limit & 0 RAM usage)
+        const initRes = await fetch("/api/files/initiate-upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: file.name,
+            size: file.size,
+            mimeType: file.type || "application/octet-stream",
+            strategy: strategy,
+            targetAccountId: strategy === "MANUAL" ? selectedAccount : undefined,
+          }),
+        });
+
+        if (initRes.ok) {
+          const { uploadUrl, account } = await initRes.json();
+
+          // Direct streaming from browser to Google API
+          const googleUploadRes = await fetch(uploadUrl, {
+            method: "PUT",
+            headers: {
+              "Content-Type": file.type || "application/octet-stream",
+            },
+            body: file,
+          });
+
+          if (googleUploadRes.ok || googleUploadRes.status === 200 || googleUploadRes.status === 201) {
+            results.push({
+              name: file.name,
+              success: true,
+              accountEmail: account?.email,
+            });
+            continue;
+          } else {
+            const googleError = await googleUploadRes.text().catch(() => "");
+            console.warn("Direct upload to Google failed, retrying via fallback...", googleError);
+          }
+        }
+
+        // 2. Fallback to server streaming endpoint if direct initiation was not possible
         const formData = new FormData();
         formData.append("file", file);
         formData.append("strategy", strategy);
@@ -156,7 +195,7 @@ export default function SmartUploadsPage() {
 
   return (
     <div className="flex-1 flex flex-col min-w-0 pb-16">
-      <main className="px-8 py-7 max-w-5xl w-full mx-auto space-y-6 animate-fade-in">
+      <main className="px-3.5 sm:px-6 lg:px-8 py-5 sm:py-7 max-w-5xl w-full mx-auto space-y-6 animate-fade-in">
         {/* Title */}
         <div>
           <h1 className="text-xl font-bold tracking-tight text-foreground">
@@ -235,7 +274,7 @@ export default function SmartUploadsPage() {
           <div
             {...getRootProps()}
             className={cn(
-              "border-2 border-dashed rounded-2xl p-10 text-center flex flex-col items-center justify-center space-y-3 cursor-pointer transition-all",
+              "border-2 border-dashed rounded-2xl p-6 sm:p-10 text-center flex flex-col items-center justify-center space-y-3 cursor-pointer transition-all",
               isDragActive
                 ? "border-primary bg-primary/5 scale-[0.99]"
                 : "border-border hover:border-border/80 bg-muted/20"
